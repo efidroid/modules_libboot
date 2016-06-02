@@ -19,9 +19,10 @@
 
 typedef uintptr_t boot_uintn_t;
 typedef intptr_t  boot_intn_t;
+typedef uint8_t   boot_uint8_t;
+typedef uint16_t  boot_uint16_t;
 typedef uint32_t  boot_uint32_t;
 typedef uint64_t  boot_uint64_t;
-typedef uint8_t   boot_uint8_t;
 
 boot_uint32_t libboot_qcdt_pmic_target(boot_uint8_t num_ent);
 boot_uint32_t libboot_qcdt_platform_id(void);

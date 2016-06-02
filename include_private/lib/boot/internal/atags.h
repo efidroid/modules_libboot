@@ -20,8 +20,8 @@
 #define ATAG_NONE	0x00000000
 
 struct tag_header {
-	uint32_t size;
-	uint32_t tag;
+	boot_uint32_t size;
+	boot_uint32_t tag;
 };
 typedef struct tag_header tag_header_t;
 
@@ -30,9 +30,9 @@ typedef struct tag_header tag_header_t;
 #define FLAG_READONLY   1
 
 struct tag_core {
-	uint32_t flags;		/* bit 0 = read-only */
-	uint32_t pagesize;
-	uint32_t rootdev;
+	boot_uint32_t flags;		/* bit 0 = read-only */
+	boot_uint32_t pagesize;
+	boot_uint32_t rootdev;
 };
 typedef struct tag_core tag_core_t;
 
@@ -40,8 +40,8 @@ typedef struct tag_core tag_core_t;
 #define ATAG_MEM	0x54410002
 
 struct tag_mem32 {
-	uint32_t size;
-	uint32_t start;		/* physical start address */
+	boot_uint32_t size;
+	boot_uint32_t start;		/* physical start address */
 };
 typedef struct tag_mem32 tag_mem32_t;
 
@@ -49,15 +49,15 @@ typedef struct tag_mem32 tag_mem32_t;
 #define ATAG_VIDEOTEXT	0x54410003
 
 struct tag_videotext {
-	uint8_t x;
-	uint8_t y;
-	uint16_t video_page;
-	uint8_t video_mode;
-	uint8_t video_cols;
-	uint16_t video_ega_bx;
-	uint8_t video_lines;
-	uint8_t video_isvga;
-	uint16_t video_points;
+	boot_uint8_t x;
+	boot_uint8_t y;
+	boot_uint16_t video_page;
+	boot_uint8_t video_mode;
+	boot_uint8_t video_cols;
+	boot_uint16_t video_ega_bx;
+	boot_uint8_t video_lines;
+	boot_uint8_t video_isvga;
+	boot_uint16_t video_points;
 };
 typedef struct tag_videotext tag_videotext_t;
 
@@ -65,9 +65,9 @@ typedef struct tag_videotext tag_videotext_t;
 #define ATAG_RAMDISK	0x54410004
 
 struct tag_ramdisk {
-	uint32_t flags;		/* bit 0 = load, bit 1 = prompt */
-	uint32_t size;		/* decompressed ramdisk size in _kilo_ bytes */
-	uint32_t start;		/* starting block of floppy-based RAM disk image */
+	boot_uint32_t flags;		/* bit 0 = load, bit 1 = prompt */
+	boot_uint32_t size;		/* decompressed ramdisk size in _kilo_ bytes */
+	boot_uint32_t start;		/* starting block of floppy-based RAM disk image */
 };
 typedef struct tag_ramdisk tag_ramdisk_t;
 
@@ -82,8 +82,8 @@ typedef struct tag_ramdisk tag_ramdisk_t;
 #define ATAG_INITRD2	0x54420005
 
 struct tag_initrd {
-	uint32_t start;		/* physical start address */
-	uint32_t size;		/* size of compressed ramdisk image in bytes */
+	boot_uint32_t start;		/* physical start address */
+	boot_uint32_t size;		/* size of compressed ramdisk image in bytes */
 };
 typedef struct tag_initrd tag_initrd_t;
 
@@ -91,8 +91,8 @@ typedef struct tag_initrd tag_initrd_t;
 #define ATAG_SERIAL	0x54410006
 
 struct tag_serialnr {
-	uint32_t low;
-	uint32_t high;
+	boot_uint32_t low;
+	boot_uint32_t high;
 };
 typedef struct tag_serialnr tag_serialnr_t;
 
@@ -100,7 +100,7 @@ typedef struct tag_serialnr tag_serialnr_t;
 #define ATAG_REVISION	0x54410007
 
 struct tag_revision {
-	uint32_t rev;
+	boot_uint32_t rev;
 };
 typedef struct tag_revision tag_revision_t;
 
@@ -110,20 +110,20 @@ typedef struct tag_revision tag_revision_t;
 #define ATAG_VIDEOLFB	0x54410008
 
 struct tag_videolfb {
-	uint16_t lfb_width;
-	uint16_t lfb_height;
-	uint16_t lfb_depth;
-	uint16_t lfb_linelength;
-	uint32_t lfb_base;
-	uint32_t lfb_size;
-	uint8_t red_size;
-	uint8_t red_pos;
-	uint8_t green_size;
-	uint8_t green_pos;
-	uint8_t blue_size;
-	uint8_t blue_pos;
-	uint8_t rsvd_size;
-	uint8_t rsvd_pos;
+	boot_uint16_t lfb_width;
+	boot_uint16_t lfb_height;
+	boot_uint16_t lfb_depth;
+	boot_uint16_t lfb_linelength;
+	boot_uint32_t lfb_base;
+	boot_uint32_t lfb_size;
+	boot_uint8_t red_size;
+	boot_uint8_t red_pos;
+	boot_uint8_t green_size;
+	boot_uint8_t green_pos;
+	boot_uint8_t blue_size;
+	boot_uint8_t blue_pos;
+	boot_uint8_t rsvd_size;
+	boot_uint8_t rsvd_pos;
 };
 typedef struct tag_videolfb tag_videolfb_t;
 
@@ -139,10 +139,10 @@ typedef struct tag_cmdline tag_cmdline_t;
 #define ATAG_ACORN	0x41000101
 
 struct tag_acorn {
-	uint32_t memc_control_reg;
-	uint32_t vram_pages;
-	uint8_t sounddefault;
-	uint8_t adfsdrives;
+	boot_uint32_t memc_control_reg;
+	boot_uint32_t vram_pages;
+	boot_uint8_t sounddefault;
+	boot_uint8_t adfsdrives;
 };
 typedef struct tag_acorn tag_acorn_t;
 
@@ -150,7 +150,7 @@ typedef struct tag_acorn tag_acorn_t;
 #define ATAG_MEMCLK	0x41000402
 
 struct tag_memclk {
-	uint32_t fmemclk;
+	boot_uint32_t fmemclk;
 };
 typedef struct tag_memclk tag_memclk_t;
 
@@ -181,7 +181,7 @@ struct tag {
 typedef struct tag tag_t;
 
 struct tagtable {
-	uint32_t tag;
+	boot_uint32_t tag;
 	int (*parse) (const struct tag *);
 };
 typedef struct tagtable tagtable_t;
@@ -190,7 +190,7 @@ typedef struct tagtable tagtable_t;
 	((unsigned long)(&((struct tag *)0L)->member + 1)	\
 		<= (tag)->hdr.size * 4)
 
-#define tag_next(t)	((struct tag *)((uint32_t *)(t) + (t)->hdr.size))
+#define tag_next(t)	((struct tag *)((boot_uint32_t *)(t) + (t)->hdr.size))
 #define tag_size(type)	((sizeof(struct tag_header) + sizeof(struct type)) >> 2)
 
 #define for_each_tag(t,base)		\

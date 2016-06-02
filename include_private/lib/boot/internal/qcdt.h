@@ -45,10 +45,10 @@
 
 /*
  * For DTB V1: The DTB entries would be of the format
- * qcom,msm-id = <msm8974, CDP, rev_1>; (3 * sizeof(uint32_t))
+ * qcom,msm-id = <msm8974, CDP, rev_1>; (3 * sizeof(boot_uint32_t))
  * For DTB V2: The DTB entries would be of the format
- * qcom,msm-id   = <msm8974, rev_1>;  (2 * sizeof(uint32_t))
- * qcom,board-id = <CDP, subtype_ID>; (2 * sizeof(uint32_t))
+ * qcom,msm-id   = <msm8974, rev_1>;  (2 * sizeof(boot_uint32_t))
+ * qcom,board-id = <CDP, subtype_ID>; (2 * sizeof(boot_uint32_t))
  * The macros below are defined based on these.
  */
 #define DT_ENTRY_V1_SIZE        0xC
@@ -58,49 +58,49 @@
 
 
 typedef struct {
-    uint32_t platform_id;
-    uint32_t variant_id;
-    uint32_t board_hw_subtype;
-    uint32_t soc_rev;
-    uint32_t offset;
-    uint32_t size;
+    boot_uint32_t platform_id;
+    boot_uint32_t variant_id;
+    boot_uint32_t board_hw_subtype;
+    boot_uint32_t soc_rev;
+    boot_uint32_t offset;
+    boot_uint32_t size;
 } dt_entry_v2_t;
 
 typedef struct {
-    uint32_t platform_id;
-    uint32_t variant_id;
-    uint32_t board_hw_subtype;
-    uint32_t soc_rev;
-    uint32_t pmic_rev[4];
-    uint32_t offset;
-    uint32_t size;
+    boot_uint32_t platform_id;
+    boot_uint32_t variant_id;
+    boot_uint32_t board_hw_subtype;
+    boot_uint32_t soc_rev;
+    boot_uint32_t pmic_rev[4];
+    boot_uint32_t offset;
+    boot_uint32_t size;
 } dt_entry_t;
 
 typedef struct {
-    uint32_t magic;
-    uint32_t version;
-    uint32_t num_entries;
+    boot_uint32_t magic;
+    boot_uint32_t version;
+    boot_uint32_t num_entries;
 } dt_table_t;
 
 typedef struct  {
-    uint32_t platform_id;
-    uint32_t soc_rev;
+    boot_uint32_t platform_id;
+    boot_uint32_t soc_rev;
 } plat_id_t;
 
 typedef struct {
-    uint32_t variant_id;
-    uint32_t platform_subtype;
+    boot_uint32_t variant_id;
+    boot_uint32_t platform_subtype;
 } board_id_t;
 
 typedef struct {
-    uint32_t pmic_version[4];
+    boot_uint32_t pmic_version[4];
 } pmic_id_t;
 
 typedef struct {
-    uint32_t offset;
-    uint32_t mem_info_cnt;
-    uint32_t addr_cell_size;
-    uint32_t size_cell_size;
+    boot_uint32_t offset;
+    boot_uint32_t mem_info_cnt;
+    boot_uint32_t addr_cell_size;
+    boot_uint32_t size_cell_size;
 } dt_mem_node_info_t;
 
 typedef enum {
@@ -126,9 +126,9 @@ typedef struct {
     dt_entry_t *dt_entry_m;
 } dt_entry_node_t;
 
-int libboot_qcdt_validate(dt_table_t *table, uint32_t *dt_hdr_size);
+int libboot_qcdt_validate(dt_table_t *table, boot_uint32_t *dt_hdr_size);
 int libboot_qcdt_get_entry_info(dt_table_t *table, dt_entry_t *dt_entry_info);
 //int update_device_tree(void *fdt, const char *, void *, unsigned);
-//int libboot_qcdt_add_mem_info(void *fdt, uint32_t offset, uint64_t size, uint64_t addr);
-//void *libboot_qcdt_appended(void *kernel, uint32_t kernel_size, uint32_t dtb_offset, void *tags);
+//int libboot_qcdt_add_mem_info(void *fdt, boot_uint32_t offset, uint64_t size, uint64_t addr);
+//void *libboot_qcdt_appended(void *kernel, boot_uint32_t kernel_size, boot_uint32_t dtb_offset, void *tags);
 #endif // LIB_BOOT_INTERNAL_QCDT_H
