@@ -2,7 +2,13 @@
 #define LIB_BOOT_H
 
 #include <lib/boot/boot_platform.h>
-#include <lib/boot/internal/list.h>
+
+// LIST
+struct libboot_list_node {
+    struct libboot_list_node *prev;
+    struct libboot_list_node *next;
+};
+typedef struct libboot_list_node libboot_list_node_t;
 
 // IO
 struct boot_io;
