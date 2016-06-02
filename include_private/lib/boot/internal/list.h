@@ -24,7 +24,7 @@
 #define LIB_BOOT_INTERNAL_LIST_H
 
 #define libboot_containerof(ptr, type, member) \
-    ((type *)((boot_uintn_t)(ptr) - offsetof(type, member)))
+    ((type *)((boot_uintn_t)(ptr) - LIBBOOT_OFFSETOF(type, member)))
 #define LIBBOOT_LIST_INITIAL_VALUE(list) { &(list), &(list) }
 #define LIBBOOT_LIST_INITIAL_CLEARED_VALUE { NULL, NULL }
 
