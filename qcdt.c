@@ -101,7 +101,7 @@ int libboot_qcdt_add_compatible_entries(void *dtb, boot_uint32_t dtb_size, dt_en
 
     root_offset = fdt_path_offset(dtb, "/");
     if (root_offset < 0)
-        return false;
+        return 0;
 
     prop = fdt_getprop(dtb, root_offset, "model", &len);
     if (prop && len > 0) {
@@ -120,7 +120,7 @@ int libboot_qcdt_add_compatible_entries(void *dtb, boot_uint32_t dtb_size, dt_en
         if ((len_pmic_id % PMIC_ID_SIZE) || (len_board_id % BOARD_ID_SIZE)) {
             LOGE("qcom,pmic-id(%d) or qcom,board-id(%d) in device tree is not a multiple of (%d %d)\n",
                     len_pmic_id, len_board_id, PMIC_ID_SIZE, BOARD_ID_SIZE);
-            return false;
+            return 0;
         }
         dtb_ver = DEV_TREE_VERSION_V3;
         min_plat_id_len = PLAT_ID_SIZE;
@@ -128,7 +128,7 @@ int libboot_qcdt_add_compatible_entries(void *dtb, boot_uint32_t dtb_size, dt_en
         if (len_board_id % BOARD_ID_SIZE) {
             LOGE("qcom,board-id in device tree is (%d) not a multiple of (%d)\n",
                     len_board_id, BOARD_ID_SIZE);
-            return false;
+            return 0;
         }
         dtb_ver = DEV_TREE_VERSION_V2;
         min_plat_id_len = PLAT_ID_SIZE;
@@ -141,11 +141,11 @@ int libboot_qcdt_add_compatible_entries(void *dtb, boot_uint32_t dtb_size, dt_en
     plat_prop = (const char *)fdt_getprop(dtb, root_offset, "qcom,msm-id", &len_plat_id);
     if (!plat_prop || len_plat_id <= 0) {
         LOGI("qcom,msm-id entry not found\n");
-        return false;
+        return 0;
     } else if (len_plat_id % min_plat_id_len) {
         LOGI("qcom,msm-id in device tree is (%d) not a multiple of (%d)\n",
                 len_plat_id, min_plat_id_len);
-        return false;
+        return 0;
     }
 
     /*
@@ -160,7 +160,7 @@ int libboot_qcdt_add_compatible_entries(void *dtb, boot_uint32_t dtb_size, dt_en
 
         if (!cur_dt_entry) {
             LOGE("Out of memory\n");
-            return false;
+            return 0;
         }
         libboot_platform_memset(cur_dt_entry, 0, sizeof(dt_entry_t));
 
@@ -288,7 +288,7 @@ int libboot_qcdt_add_compatible_entries(void *dtb, boot_uint32_t dtb_size, dt_en
                 libboot_platform_free(pmic_data);
             if (model)
                 libboot_platform_free(model);
-            return false;
+            return 0;
         }
 
         dt_entry_array = (dt_entry_t *) libboot_platform_alloc(sizeof(dt_entry_t) * num_entries);
@@ -373,7 +373,7 @@ int libboot_qcdt_add_compatible_entries(void *dtb, boot_uint32_t dtb_size, dt_en
     }
     if (model)
         libboot_platform_free(model);
-    return true;
+    return 1;
 }
 
 #if 0

@@ -41,9 +41,9 @@ static inline void libboot_list_clear_node(struct libboot_list_node *item)
 static inline int libboot_list_in_list(struct libboot_list_node *item)
 {
     if (item->prev == 0 && item->next == 0)
-        return false;
+        return 0;
     else
-        return true;
+        return 1;
 }
 
 static inline void libboot_list_add_head(struct libboot_list_node *list, struct libboot_list_node *item)
@@ -256,7 +256,7 @@ static inline struct libboot_list_node *libboot_list_next_wrap(struct libboot_li
 
 static inline int libboot_list_is_empty(struct libboot_list_node *list)
 {
-    return (list->next == list) ? true : false;
+    return (list->next == list) ? 1 : 0;
 }
 
 static inline boot_uintn_t libboot_list_length(struct libboot_list_node *list)
