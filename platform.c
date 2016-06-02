@@ -61,18 +61,14 @@ void *libboot_platform_memset(void *s, int c, boot_uintn_t n) {
     return memset(s, c, n);
 }
 
-static boot_uintn_t mem_used = 0;
 void* libboot_platform_alloc(boot_uintn_t size) {
     void* mem = malloc(size);
-    mem_used += size;
-    dprintf(CRITICAL, "%s(%lu) = %p || INUSE: %lu\n", __func__, size, mem, mem_used);
     if(!mem)
         libboot_format_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_OUT_OF_MEMORY);
     return mem;
 }
 
 void libboot_platform_free(void *ptr) {
-    dprintf(CRITICAL, "%s(%p)\n", __func__, ptr);
     free(ptr);
 }
 
