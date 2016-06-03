@@ -1,0 +1,43 @@
+/*
+ * Copyright 2016, The EFIDroid Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+*/
+
+#ifndef LIB_BOOT_PLATFORM_COMMON_H
+#define LIB_BOOT_PLATFORM_COMMON_H
+
+#include <lib/boot/boot_platform.h>
+
+boot_uint32_t libboot_qcdt_pmic_target(boot_uint8_t num_ent);
+boot_uint32_t libboot_qcdt_platform_id(void);
+boot_uint32_t libboot_qcdt_hardware_id(void);
+boot_uint32_t libboot_qcdt_hardware_subtype(void);
+boot_uint32_t libboot_qcdt_soc_version(void);
+boot_uint32_t libboot_qcdt_target_id(void);
+boot_uint32_t libboot_qcdt_foundry_id(void);
+boot_uint32_t libboot_qcdt_get_hlos_subtype(void);
+
+void  libboot_platform_memmove(void* dst, const void* src, boot_uintn_t num);
+int   libboot_platform_memcmp(const void *s1, const void *s2, boot_uintn_t n);
+void* libboot_platform_memset(void *s, int c, boot_uintn_t n);
+void* libboot_platform_alloc(boot_uintn_t size);
+void  libboot_platform_free(void *ptr);
+void  libboot_platform_format_string(char* buf, boot_uintn_t sz, const char* fmt, ...);
+char* libboot_platform_strdup(const char *s);
+char* libboot_platform_strtok_r(char *str, const char *delim, char **saveptr);
+char* libboot_platform_strchr(const char *s, int c);
+int   libboot_platform_strcmp(const char* str1, const char* str2);
+boot_uintn_t libboot_platform_strlen(const char* str);
+
+#endif // LIB_BOOT_PLATFORM_COMMON_H
