@@ -95,9 +95,9 @@ static int ldrmodule_load(bootimg_context_t* context) {
     context->kernel_is_linux = 1;
 
     // remove old data
-    context->bigfree(context->kernel_data);
-    context->bigfree(context->ramdisk_data);
-    context->bigfree(context->tags_data);
+    libboot_platform_bigfree(context->kernel_data);
+    libboot_platform_bigfree(context->ramdisk_data);
+    libboot_platform_bigfree(context->tags_data);
 
     // set new data
     context->kernel_data = kernel_data;
@@ -117,9 +117,9 @@ static int ldrmodule_load(bootimg_context_t* context) {
     goto out;
 
 err_free:
-    context->bigfree(kernel_data);
-    context->bigfree(ramdisk_data);
-    context->bigfree(tags_data);
+    libboot_platform_bigfree(kernel_data);
+    libboot_platform_bigfree(ramdisk_data);
+    libboot_platform_bigfree(tags_data);
 
 out:
     libboot_platform_free(hdr);

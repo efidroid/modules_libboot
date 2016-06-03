@@ -94,14 +94,7 @@ void libboot_error_stack_reset(void);
 
 struct bootimg_context;
 
-typedef void* (*libboot_context_getmemory_callback_t)(void* pdata, boot_uintn_t addr, boot_uintn_t size);
-
-typedef void* (*libboot_context_fn_bootalloc_t)(boot_uintn_t addr, boot_uintn_t sz);
-typedef void* (*libboot_context_fn_bigalloc_t)(boot_uintn_t sz);
-typedef void  (*libboot_context_fn_bigfree_t)(void* ptr);
-typedef void* (*libboot_context_fn_getmemory_t)(void *pdata, libboot_context_getmemory_callback_t cb);
 typedef void* (*libboot_context_fn_addatags_t)(void *tags);
-typedef boot_uintn_t (*libboot_context_fn_getmachtype_t)(struct bootimg_context* context);
 
 struct bootimg_context {
     // identify
@@ -128,13 +121,6 @@ struct bootimg_context {
     boot_uintn_t kernel_addr;
     boot_uintn_t ramdisk_addr;
     boot_uintn_t tags_addr;
-
-    // external configuration: required
-    libboot_context_fn_bootalloc_t bootalloc;
-    libboot_context_fn_bigalloc_t bigalloc;
-    libboot_context_fn_bigfree_t bigfree;
-    libboot_context_fn_getmachtype_t getmachtype;
-    libboot_context_fn_getmemory_t getmemory;
 
     // external configuration: optional
     void* default_fdt;

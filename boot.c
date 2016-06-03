@@ -76,7 +76,7 @@ void* libboot_internal_io_alloc(boot_io_t* io, boot_uintn_t sz) {
 }
 
 void* libboot_internal_io_bigalloc(bootimg_context_t* context, boot_uintn_t sz) {
-    return context->bigalloc(IO_ALIGN(context->io, sz));
+    return libboot_platform_bigalloc(IO_ALIGN(context->io, sz));
 }
 
 boot_intn_t libboot_internal_io_read(boot_io_t* io, void* buf, boot_uintn_t off, boot_uintn_t sz) {
@@ -260,9 +260,9 @@ void libboot_free_context(bootimg_context_t* context) {
     if(!context) return;
 
     libboot_platform_free(context->io);
-    context->bigfree(context->kernel_data);
-    context->bigfree(context->ramdisk_data);
-    context->bigfree(context->tags_data);
+    libboot_platform_bigfree(context->kernel_data);
+    libboot_platform_bigfree(context->ramdisk_data);
+    libboot_platform_bigfree(context->tags_data);
     libboot_cmdline_free(&context->cmdline);
 }
 
@@ -405,9 +405,6 @@ static int libboot_generate_tags(bootimg_context_t* context) {
 int libboot_prepare(bootimg_context_t* context) {
     int rc;
 
-    if(!context->bootalloc)
-        return -1;
-
     context->kernel_arguments[0] = 0;
     context->kernel_arguments[1] = 0;
     context->kernel_arguments[2] = 0;
@@ -420,15 +417,15 @@ int libboot_prepare(bootimg_context_t* context) {
 
     // allocate loading addresses
     if(context->kernel_addr && context->kernel_size) {
-        context->kernel_addr = (boot_uintn_t)context->bootalloc(context->kernel_addr, context->kernel_size);
+        context->kernel_addr = (boot_uintn_t)libboot_platform_bootalloc(context->kernel_addr, context->kernel_size);
         if(!context->kernel_addr) return -1;
     }
     if(context->ramdisk_addr && context->ramdisk_size) {
-        context->ramdisk_addr = (boot_uintn_t)context->bootalloc(context->ramdisk_addr, context->ramdisk_size);
+        context->ramdisk_addr = (boot_uintn_t)libboot_platform_bootalloc(context->ramdisk_addr, context->ramdisk_size);
         if(!context->ramdisk_addr) return -1;
     }
     if(context->tags_addr && context->tags_size) {
-        context->tags_addr = (boot_uintn_t)context->bootalloc(context->tags_addr, context->tags_size);
+        context->tags_addr = (boot_uintn_t)libboot_platform_bootalloc(context->tags_addr, context->tags_size);
         if(!context->tags_addr) return -1;
     }
 
@@ -440,13 +437,9 @@ int libboot_prepare(bootimg_context_t* context) {
         libboot_platform_memmove((void*)context->tags_addr, context->tags_data, context->tags_size);
 
     if(context->kernel_is_linux) {
-        int machtype = 0;
-        if(context->getmachtype)
-            machtype = context->getmachtype(context);
-
         // set arguments
         context->kernel_arguments[0] = 0;
-        context->kernel_arguments[1] = machtype;
+        context->kernel_arguments[1] = libboot_platform_machtype();
         context->kernel_arguments[2] = context->tags_addr;
     }
 

@@ -150,7 +150,7 @@ static int ldrmodule_load(bootimg_context_t* context) {
     libboot_identify_memory(data, out_len, context);
 
     // replace kernel data
-    context->bigfree(context->kernel_data);
+    libboot_platform_bigfree(context->kernel_data);
     context->kernel_data = data;
     context->kernel_size = out_len;
 
@@ -160,7 +160,7 @@ static int ldrmodule_load(bootimg_context_t* context) {
     goto out;
 
 out_free:
-    context->bigfree(data);
+    libboot_platform_bigfree(data);
 
 out:
     libboot_platform_free(size);

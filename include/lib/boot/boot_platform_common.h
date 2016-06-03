@@ -18,6 +18,7 @@
 #define LIB_BOOT_PLATFORM_COMMON_H
 
 #include <lib/boot/boot_platform.h>
+typedef void* (*libboot_platform_getmemory_callback_t)(void* pdata, boot_uintn_t addr, boot_uintn_t size);
 
 boot_uint32_t libboot_qcdt_pmic_target(boot_uint8_t num_ent);
 boot_uint32_t libboot_qcdt_platform_id(void);
@@ -39,5 +40,12 @@ char* libboot_platform_strtok_r(char *str, const char *delim, char **saveptr);
 char* libboot_platform_strchr(const char *s, int c);
 int   libboot_platform_strcmp(const char* str1, const char* str2);
 boot_uintn_t libboot_platform_strlen(const char* str);
+
+boot_uintn_t libboot_platform_machtype(void);
+void* libboot_platform_bootalloc(boot_uintn_t addr, boot_uintn_t sz);
+void  libboot_platform_bootfree(boot_uintn_t addr, boot_uintn_t sz);
+void* libboot_platform_bigalloc(boot_uintn_t sz);
+void  libboot_platform_bigfree(void* ptr);
+void* libboot_platform_getmemory(void *pdata, libboot_platform_getmemory_callback_t cb);
 
 #endif // LIB_BOOT_PLATFORM_COMMON_H
