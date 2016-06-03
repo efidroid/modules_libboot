@@ -131,13 +131,24 @@ struct bootimg_context {
 };
 typedef struct bootimg_context bootimg_context_t;
 
+// basic loading
 int libboot_init(void);
 void libboot_init_context(bootimg_context_t* context);
 void libboot_free_context(bootimg_context_t* context);
 int libboot_identify(boot_io_t* io, bootimg_context_t* context);
 int libboot_identify_memory(void* mem, boot_uintn_t sz, bootimg_context_t* context);
-
 int libboot_load(bootimg_context_t* context);
 int libboot_prepare(bootimg_context_t* context);
+
+// cmdline
+void libboot_cmdline_init(libboot_list_node_t* list);
+void libboot_cmdline_free(libboot_list_node_t* list);
+void libboot_cmdline_addall(libboot_list_node_t* list, char* cmdline, int overwrite);
+void libboot_cmdline_add(libboot_list_node_t* list, const char* name, const char* value, int overwrite);
+int libboot_cmdline_has(libboot_list_node_t* list, const char* name);
+const char* libboot_cmdline_get(libboot_list_node_t* list, const char* name);
+boot_uintn_t libboot_cmdline_generate(libboot_list_node_t* list, char* buf, boot_uintn_t bufsize);
+void libboot_cmdline_remove(libboot_list_node_t* list, const char* name);
+boot_uintn_t libboot_cmdline_length(libboot_list_node_t* list);
 
 #endif // LIB_BOOT_H
