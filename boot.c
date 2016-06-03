@@ -424,7 +424,7 @@ int libboot_prepare(bootimg_context_t* context) {
         if(!context->kernel_addr) return -1;
     }
     if(context->ramdisk_addr) {
-        context->ramdisk_addr = (boot_uintn_t)context->bootalloc(context->ramdisk_addr, context->ramdisk_addr);
+        context->ramdisk_addr = (boot_uintn_t)context->bootalloc(context->ramdisk_addr, context->ramdisk_size);
         if(!context->ramdisk_addr) return -1;
     }
     if(context->tags_addr) {
