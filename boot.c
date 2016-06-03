@@ -419,15 +419,15 @@ int libboot_prepare(bootimg_context_t* context) {
     }
 
     // allocate loading addresses
-    if(context->kernel_addr) {
+    if(context->kernel_addr && context->kernel_size) {
         context->kernel_addr = (boot_uintn_t)context->bootalloc(context->kernel_addr, context->kernel_size);
         if(!context->kernel_addr) return -1;
     }
-    if(context->ramdisk_addr) {
+    if(context->ramdisk_addr && context->ramdisk_size) {
         context->ramdisk_addr = (boot_uintn_t)context->bootalloc(context->ramdisk_addr, context->ramdisk_size);
         if(!context->ramdisk_addr) return -1;
     }
-    if(context->tags_addr) {
+    if(context->tags_addr && context->tags_size) {
         context->tags_addr = (boot_uintn_t)context->bootalloc(context->tags_addr, context->tags_size);
         if(!context->tags_addr) return -1;
     }
