@@ -18,8 +18,144 @@
 #include <lib/boot/internal/boot_internal.h>
 #include <libfdt.h>
 
+#define DTB_PAD_SIZE 1024
+
+typedef struct {
+    void* fdt;
+    boot_uint32_t memoffset;
+    boot_uint8_t do_append;
+
+    boot_uint32_t addr_cell_size;
+    boot_uint32_t size_cell_size;
+
+    int rc;
+} meminfo_pdata_t;
+
+static int fdtloader_get_cell_sizes(meminfo_pdata_t* pdata) {
+    int rc;
+    int len;
+    const boot_uint32_t *valp;
+    boot_uint32_t offset;
+    boot_uint32_t addr_cell_size = 0;
+    boot_uint32_t size_cell_size = 0;
+
+    // get root node offset
+    rc = fdt_path_offset(pdata->fdt, "/");
+    if (rc<0) return -1;
+    offset = rc;
+
+    // find the #address-cells size
+    valp = fdt_getprop(pdata->fdt, offset, "#address-cells", &len);
+    if (len<=0 || !valp) {
+        if (len == -FDT_ERR_NOTFOUND)
+            addr_cell_size = 2;
+        else return -1;
+    }
+    else {
+        addr_cell_size = fdt32_to_cpu(*valp);
+    }
+
+    // find the #size-cells size
+    valp = fdt_getprop(pdata->fdt, offset, "#size-cells", &len);
+    if (len<=0 || !valp) {
+        if (len == -FDT_ERR_NOTFOUND)
+            size_cell_size = 2;
+        else return -1;
+    }
+    else {
+        size_cell_size = fdt32_to_cpu(*valp);
+    }
+
+    pdata->addr_cell_size = addr_cell_size;
+    pdata->size_cell_size = size_cell_size;
+
+    return 0;
+}
+
+static int fdtloader_add_single_meminfo(meminfo_pdata_t* pdata, boot_uint64_t addr, boot_uint64_t size) {
+    int rc = 0;
+
+    // set first addr
+    if (!pdata->do_append) {
+        if (pdata->addr_cell_size == 2) {
+            rc = fdt_setprop_u32(pdata->fdt, pdata->memoffset, "reg", addr >> 32);
+            if (rc) return -1;
+
+            rc = fdt_appendprop_u32(pdata->fdt, pdata->memoffset, "reg", (boot_uint32_t)addr);
+            if (rc) return -1;
+        } else {
+            rc = fdt_setprop_u32(pdata->fdt, pdata->memoffset, "reg", (boot_uint32_t)addr);
+            if (rc) if (rc) return -1;
+        }
+
+        pdata->do_append = 1;
+    }
+    // append addr
+    else {
+        if (pdata->addr_cell_size == 2) {
+            rc = fdt_appendprop_u32(pdata->fdt, pdata->memoffset, "reg", addr >> 32);
+            if (rc) return -1;
+        }
+
+        rc = fdt_appendprop_u32(pdata->fdt, pdata->memoffset, "reg", (boot_uint32_t)addr);
+        if (rc) return -1;
+    }
+
+    // append size
+    if (pdata->addr_cell_size == 2) {
+        rc = fdt_appendprop_u32(pdata->fdt, pdata->memoffset, "reg", size>>32);
+        if (rc) return -1;
+    }
+    rc = fdt_appendprop_u32(pdata->fdt, pdata->memoffset, "reg", (boot_uint32_t)size);
+    if (rc) return -1;
+
+    return 0;
+}
+
+static void* getmemory_callback(void* _pdata, boot_uintn_t addr, boot_uintn_t size) {
+    meminfo_pdata_t* pdata = _pdata;
+
+    // a previous call failed
+    if(pdata->rc) return pdata;
+
+    // add meminfo
+    pdata->rc = fdtloader_add_single_meminfo(pdata, (boot_uint64_t)addr, (boot_uint64_t)size);
+
+    return pdata;
+}
+
+static int fdtloader_add_meminfo(void* fdt) {
+    int rc;
+
+    meminfo_pdata_t pdata = {
+        .fdt = fdt,
+        .memoffset = 0,
+        .do_append = 0,
+        .addr_cell_size = 1,
+        .size_cell_size = 1,
+        .rc = 0,
+    };
+
+    // get memory node offset
+    rc = fdt_path_offset(fdt, "/memory");
+    if(rc<0) return -1;
+    pdata.memoffset = rc;
+
+    // get cell sizes
+    fdtloader_get_cell_sizes(&pdata);
+
+    // add all memory ranges
+    libboot_platform_getmemory(&pdata, getmemory_callback);
+    if(pdata.rc) return -1;
+
+    return 0;
+}
+
 static int tagmodule_patch(bootimg_context_t* context) {
-    (void)(context);
+    int rc;
+    int ret = -1;
+    void* fdt = NULL;
+    boot_uint32_t offset;
 
     // use default fdt
     if(context->tags_data==NULL) {
@@ -30,10 +166,61 @@ static int tagmodule_patch(bootimg_context_t* context) {
         context->tags_type = LIBBOOT_TAGS_TYPE_FDT;
     }
 
-    // TODO: patch fdt
+    // check fdt header
+    rc = fdt_check_header(context->tags_data);
+    if(rc) goto out;
 
+    // allocate fdt copy with padding
+    boot_uintn_t newsize = fdt_totalsize(context->tags_data) + DTB_PAD_SIZE;
+    fdt = libboot_platform_bigalloc(newsize);
+    if(!fdt) goto out;
+
+    // copy fdt to new memory
+    rc = fdt_open_into(context->tags_data, fdt, newsize);
+    if(rc) goto out_free;
+
+    // add memory info
+    rc = fdtloader_add_meminfo(fdt);
+    if(rc<0) goto out_free;
+
+    // get chosen node offset
+    rc = fdt_path_offset(fdt, "/chosen");
+    if(rc<0) goto out_free;
+    offset = rc;
+
+    // cmdline
+    boot_uintn_t cmdline_len = libboot_cmdline_length(&context->cmdline);
+    if(cmdline_len) {
+        char* cmdline = libboot_platform_bigalloc(cmdline_len);
+        libboot_cmdline_generate(&context->cmdline, cmdline, cmdline_len);
+
+        rc = fdt_appendprop_string(fdt, offset, "bootargs", cmdline);
+        libboot_platform_bigfree(cmdline);
+        if (rc) goto out_free;
+    }
+
+    // ramdisk
+    if(context->ramdisk_size) {
+        rc = fdt_setprop_u32(fdt, offset, "linux,initrd-start", (boot_uint32_t)context->ramdisk_addr);
+        if(rc) goto out_free;
+
+        rc = fdt_setprop_u32(fdt, offset, "linux,initrd-end", ((boot_uint32_t)context->ramdisk_addr + context->ramdisk_size));
+        if(rc) goto out_free;
+    }
+
+    // set new fdt
+    context->tags_data = fdt;
+    context->tags_size = fdt_totalsize(fdt);
     context->tags_ready = 1;
-    return 0;
+
+    ret = 0;
+    goto out;
+
+out_free:
+    libboot_platform_bigfree(fdt);
+
+out:
+    return ret;
 }
 
 static boot_uint32_t magic;
