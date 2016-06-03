@@ -439,7 +439,10 @@ int libboot_prepare(bootimg_context_t* context) {
     if(context->kernel_is_linux) {
         // set arguments
         context->kernel_arguments[0] = 0;
-        context->kernel_arguments[1] = libboot_platform_machtype();
+        if(context->tags_type==LIBBOOT_TAGS_TYPE_FDT)
+            context->kernel_arguments[1] = 0;
+        else
+            context->kernel_arguments[1] = libboot_platform_machtype();
         context->kernel_arguments[2] = context->tags_addr;
     }
 
