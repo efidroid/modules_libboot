@@ -124,17 +124,21 @@ struct bootimg_context {
     // load: cmdline
     libboot_list_node_t cmdline;
 
-    // external configuration
+    // prepare: final loading addresses
     boot_uintn_t kernel_addr;
     boot_uintn_t ramdisk_addr;
     boot_uintn_t tags_addr;
-    void* default_fdt;
-    void* default_qcdt;
-    libboot_context_fn_getmachtype_t getmachtype;
+
+    // external configuration: required
     libboot_context_fn_bootalloc_t bootalloc;
     libboot_context_fn_bigalloc_t bigalloc;
     libboot_context_fn_bigfree_t bigfree;
+    libboot_context_fn_getmachtype_t getmachtype;
     libboot_context_fn_getmemory_t getmemory;
+
+    // external configuration: optional
+    void* default_fdt;
+    void* default_qcdt;
     libboot_context_fn_addatags_t add_custom_atags;
 };
 typedef struct bootimg_context bootimg_context_t;
