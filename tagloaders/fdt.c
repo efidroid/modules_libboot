@@ -208,6 +208,9 @@ static int tagmodule_patch(bootimg_context_t* context) {
         if(rc) goto out_free;
     }
 
+    // pack fdt
+    fdt_pack(fdt);
+
     // free old fdt
     libboot_platform_bigfree(context->tags_data);
 
