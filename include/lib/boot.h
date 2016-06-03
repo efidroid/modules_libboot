@@ -100,6 +100,8 @@ struct bootimg_context {
     // identify
     bootimg_type_t type;
     boot_io_t* io;
+    boot_uint32_t checksum;
+    boot_uint8_t initial_identification_done;
 
     // load: kernel
     boot_uintn_t kernel_size;

@@ -35,6 +35,7 @@
 // LOADERS
 typedef int (*ldrmodule_magictest_t)(boot_io_t* io);
 typedef int (*ldrmodule_load_t)(bootimg_context_t* context);
+typedef boot_uint32_t (*ldrmodule_checksum_t)(bootimg_context_t* context);
 
 typedef struct {
     libboot_list_node_t node;
@@ -47,6 +48,9 @@ typedef struct {
     boot_uintn_t magic_off;
     boot_uintn_t magic_sz;
     const void* magic_val;
+
+    // checksum
+    ldrmodule_checksum_t checksum;
 
     // loading
     ldrmodule_load_t load;
@@ -93,6 +97,9 @@ char* libboot_internal_error_stack_alloc(void);
     else libboot_platform_format_string(buf, 4096, "unknown error "LIBBOOT_FMT_UINTN" in group "LIBBOOT_FMT_UINTN, group, type); \
 } while(0)
 void libboot_internal_register_error(libboot_error_group_t group, libboot_error_type_t type, const char* fmt);
+
+// crc
+unsigned long libboot_crc32(unsigned long crc, const unsigned char* buf, unsigned int len);
 
 // IO
 void* libboot_internal_io_alloc(boot_io_t* io, boot_uintn_t sz);

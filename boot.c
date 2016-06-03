@@ -125,6 +125,10 @@ int libboot_identify(boot_io_t* io, bootimg_context_t* context) {
             libboot_internal_free_io(context->io);
             context->type = type;
             context->io = io;
+
+            if(mod->checksum && !context->initial_identification_done)
+                context->checksum = mod->checksum(context);
+
             rc = 0;
             break;
         }
@@ -137,6 +141,9 @@ int libboot_identify(boot_io_t* io, bootimg_context_t* context) {
         context->io = io;
         rc = 0;
     }
+
+    if(rc==0)
+        context->initial_identification_done = 1;
 
     return rc;
 }

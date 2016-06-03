@@ -98,11 +98,33 @@ out:
     return ret;
 }
 
+static boot_uint32_t ldrmodule_checksum(bootimg_context_t* context) {
+    int rc;
+    boot_uint32_t ret = 0;
+
+    // allocate header
+    qcom_bootimg_t* hdr = libboot_internal_io_alloc(context->io, sizeof(qcom_bootimg_t));
+    if(!hdr) goto out;
+
+    // read header
+    rc = libboot_internal_io_read(context->io, hdr, 0, sizeof(*hdr));
+    if(rc<0) goto out;
+
+    // calculate checksum
+    ret = libboot_crc32(0, (void*)hdr, sizeof(*hdr));
+
+out:
+    libboot_platform_free(hdr);
+
+    return ret;
+}
+
 static ldrmodule_t ldrmodule = {
     .type = BOOTIMG_TYPE_QCMBN,
     .magic_custom_test = ldrmodule_magictest,
 
     .load = ldrmodule_load,
+    .checksum = ldrmodule_checksum,
 };
 
 int libboot_internal_ldrmodule_qcmbn_init(void) {
