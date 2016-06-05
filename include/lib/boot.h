@@ -95,6 +95,7 @@ void libboot_error_stack_reset(void);
 struct bootimg_context;
 
 typedef void* (*libboot_context_fn_addatags_t)(void *tags);
+typedef void  (*libboot_context_fn_patchfdt_t)(void *fdt);
 
 struct bootimg_context {
     // identify
@@ -128,6 +129,7 @@ struct bootimg_context {
     void* default_fdt;
     void* default_qcdt;
     libboot_context_fn_addatags_t add_custom_atags;
+    libboot_context_fn_patchfdt_t patch_fdt;
 };
 typedef struct bootimg_context bootimg_context_t;
 

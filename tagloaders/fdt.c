@@ -208,6 +208,10 @@ static int tagmodule_patch(bootimg_context_t* context) {
         if(rc) goto out_free;
     }
 
+    // platform specific patches
+    if(context->patch_fdt)
+        context->patch_fdt(fdt);
+
     // pack fdt
     fdt_pack(fdt);
 
