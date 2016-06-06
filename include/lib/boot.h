@@ -43,6 +43,7 @@ typedef struct boot_io boot_io_t;
 
 // TYPE
 typedef enum {
+    BOOTIMG_TYPE_UNKNOWN = -2,
     BOOTIMG_TYPE_RAW = -1,
     BOOTIMG_TYPE_ANDROID,
     BOOTIMG_TYPE_EFI,
@@ -100,9 +101,9 @@ typedef void  (*libboot_context_fn_patchfdt_t)(void *fdt);
 struct bootimg_context {
     // identify
     bootimg_type_t type;
+    bootimg_type_t outer_type;
     boot_io_t* io;
     boot_uint32_t checksum;
-    boot_uint8_t initial_identification_done;
 
     // load: kernel
     boot_uintn_t kernel_size;

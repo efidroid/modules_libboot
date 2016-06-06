@@ -93,7 +93,7 @@ void libboot_internal_free_io(boot_io_t* io) {
 }
 
 int libboot_identify(boot_io_t* io, bootimg_context_t* context) {
-    bootimg_type_t type = BOOTIMG_TYPE_RAW;
+    bootimg_type_t type = BOOTIMG_TYPE_UNKNOWN;
     int rc = 0;
 
     ldrmodule_t *mod;
@@ -121,12 +121,12 @@ int libboot_identify(boot_io_t* io, bootimg_context_t* context) {
         }
 
         // we have a match
-        if(type!=BOOTIMG_TYPE_RAW) {
+        if(type!=BOOTIMG_TYPE_UNKNOWN) {
             libboot_internal_free_io(context->io);
             context->type = type;
             context->io = io;
 
-            if(mod->checksum && !context->initial_identification_done)
+            if(mod->checksum && context->outer_type==BOOTIMG_TYPE_UNKNOWN)
                 context->checksum = mod->checksum(context);
 
             rc = 0;
@@ -135,15 +135,24 @@ int libboot_identify(boot_io_t* io, bootimg_context_t* context) {
     }
 
     // no match
-    if(type==BOOTIMG_TYPE_RAW) {
+    if(type==BOOTIMG_TYPE_UNKNOWN) {
         libboot_internal_free_io(context->io);
-        context->type = type;
-        context->io = io;
-        rc = 0;
+
+        // this is the first scan and we don't have a match!
+        if(context->outer_type==BOOTIMG_TYPE_UNKNOWN) {
+            rc = -1;
+        }
+        else {
+            context->type = BOOTIMG_TYPE_RAW;
+            context->io = io;
+            rc = 0;
+        }
     }
 
-    if(rc==0)
-        context->initial_identification_done = 1;
+    // set outer type on first scan
+    if(rc==0 && context->outer_type==BOOTIMG_TYPE_UNKNOWN) {
+        context->outer_type = context->type;
+    }
 
     return rc;
 }
@@ -261,6 +270,8 @@ void libboot_init_context(bootimg_context_t* context) {
 
     libboot_platform_memset(context, 0, sizeof(*context));
     libboot_cmdline_init(&context->cmdline);
+    context->type = BOOTIMG_TYPE_UNKNOWN;
+    context->outer_type = BOOTIMG_TYPE_UNKNOWN;
 }
 
 void libboot_free_context(bootimg_context_t* context) {
@@ -299,28 +310,8 @@ int libboot_load(bootimg_context_t* context) {
         if(!matched) break;
     }
 
-    // this was a raw image in first place
-    if(rc==0 && context->type==BOOTIMG_TYPE_RAW && !context->kernel_data) {
-        // calculate size
-        boot_uintn_t size = context->io->numblocks*context->io->blksz;
-
-        // allocate data
-        void* data = libboot_internal_io_bigalloc(context, size);
-        if(!data) return -1;
-
-        // read data
-        rc = libboot_internal_io_read(context->io, data, 0, size);
-        if(rc<0) {
-            libboot_platform_free(data);
-            return -1;
-        }
-        rc = 0;
-
-        context->kernel_data = data;
-    }
-
     // no kernel was loaded
-    if(!context->kernel_data)
+    if(context->type==BOOTIMG_TYPE_RAW && !context->kernel_data)
         rc = -1;
 
     return rc;
@@ -411,6 +402,9 @@ static int libboot_generate_tags(bootimg_context_t* context) {
 
 int libboot_prepare(bootimg_context_t* context) {
     int rc;
+
+    if(context->type!=BOOTIMG_TYPE_RAW)
+        return -1;
 
     context->kernel_arguments[0] = 0;
     context->kernel_arguments[1] = 0;
