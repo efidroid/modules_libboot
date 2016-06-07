@@ -38,7 +38,7 @@ static int tagmodule_patch(bootimg_context_t* context) {
         return -1;
 
     // allocate data
-    void* data = libboot_platform_bigalloc(ATAG_MAX_SIZE);
+    void* data = libboot_bigalloc(ATAG_MAX_SIZE);
     if(!data) return -1;
 
     // generate atags
@@ -82,7 +82,7 @@ static int tagmodule_patch(bootimg_context_t* context) {
     tag->hdr.size = 0;
 
     // set data
-    libboot_platform_bigfree(context->tags_data);
+    libboot_bigfree(context->tags_data);
     context->tags_data = data;
     context->tags_size = ATAG_MAX_SIZE;
     context->tags_type = LIBBOOT_TAGS_TYPE_ATAGS;

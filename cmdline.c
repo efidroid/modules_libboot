@@ -52,12 +52,12 @@ void libboot_cmdline_add(libboot_list_node_t* list, const char* name, const char
 		if(!overwrite) return;
 
 		libboot_list_delete(&item->node);
-		libboot_platform_free(item->name);
-		libboot_platform_free(item->value);
-		libboot_platform_free(item);
+		libboot_free(item->name);
+		libboot_free(item->value);
+		libboot_free(item);
 	}
 
-	item = libboot_platform_alloc(sizeof(cmdline_item_t));
+	item = libboot_alloc(sizeof(cmdline_item_t));
 	item->name = libboot_platform_strdup(name);
 	item->value = value?libboot_platform_strdup(value):NULL;
 
@@ -68,9 +68,9 @@ void libboot_cmdline_remove(libboot_list_node_t* list, const char* name) {
 	cmdline_item_t* item = cmdline_get_internal(list, name);
 	if(item) {
 		libboot_list_delete(&item->node);
-		libboot_platform_free(item->name);
-		libboot_platform_free(item->value);
-		libboot_platform_free(item);
+		libboot_free(item->name);
+		libboot_free(item->value);
+		libboot_free(item);
 	}
 }
 
@@ -124,7 +124,7 @@ static int str2nameval(const char* str, char** name, char** value) {
 	index = (int)(c - str);
 
 	// get name
-	ret_name = libboot_platform_alloc(index+1);
+	ret_name = libboot_alloc(index+1);
 	libboot_platform_memmove(ret_name, str, index);
 	ret_name[index] = 0;
 
@@ -152,8 +152,8 @@ void libboot_cmdline_addall(libboot_list_node_t* list, char* cmdline, int overwr
 		libboot_cmdline_add(list, name, value, overwrite);
 
         // free
-		libboot_platform_free(name);
-		libboot_platform_free(value);
+		libboot_free(name);
+		libboot_free(value);
 
         // next
 		pch = libboot_platform_strtok_r(NULL, sep, &saveptr);
@@ -170,8 +170,8 @@ void libboot_cmdline_free(libboot_list_node_t* list)
     while(!libboot_list_is_empty(list)) {
         cmdline_item_t* item = libboot_list_remove_tail_type(list, cmdline_item_t, node);
 
-		libboot_platform_free(item->name);
-		libboot_platform_free(item->value);
-		libboot_platform_free(item);
+		libboot_free(item->name);
+		libboot_free(item->value);
+		libboot_free(item);
     }
 }

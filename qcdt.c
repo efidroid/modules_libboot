@@ -50,12 +50,12 @@ static int devtree_delete_incompatible_entries2(dt_entry_node_t *dt_list, boot_u
 static dt_entry_node_t *dt_entry_list_init(void) {
     dt_entry_node_t *dt_node_member = NULL;
 
-    dt_node_member = (dt_entry_node_t *) libboot_platform_alloc(sizeof(dt_entry_node_t));
+    dt_node_member = (dt_entry_node_t *) libboot_alloc(sizeof(dt_entry_node_t));
     LIBBOOT_ASSERT(dt_node_member);
 
     libboot_list_clear_node(&dt_node_member->node);
 
-    dt_node_member->dt_entry_m = (dt_entry_t *) libboot_platform_alloc(sizeof(dt_entry_t));
+    dt_node_member->dt_entry_m = (dt_entry_t *) libboot_alloc(sizeof(dt_entry_t));
     LIBBOOT_ASSERT(dt_node_member->dt_entry_m);
 
     libboot_platform_memset(dt_node_member->dt_entry_m , 0, sizeof(dt_entry_t));
@@ -69,8 +69,8 @@ static void insert_dt_entry_in_queue(dt_entry_node_t *dt_list, dt_entry_node_t *
 static void dt_entry_list_delete(dt_entry_node_t *dt_node_member) {
     if (libboot_list_in_list(&dt_node_member->node)) {
         libboot_list_delete(&dt_node_member->node);
-        libboot_platform_free(dt_node_member->dt_entry_m);
-        libboot_platform_free(dt_node_member);
+        libboot_free(dt_node_member->dt_entry_m);
+        libboot_free(dt_node_member);
     }
 }
 
@@ -104,7 +104,7 @@ int libboot_qcdt_add_compatible_entries(void *dtb, boot_uint32_t dtb_size, dt_en
 
     prop = fdt_getprop(dtb, root_offset, "model", &len);
     if (prop && len > 0) {
-        model = (char *) libboot_platform_alloc(sizeof(char) * len);
+        model = (char *) libboot_alloc(sizeof(char) * len);
         LIBBOOT_ASSERT(model);
         libboot_internal_strlcpy(model, prop, len);
     } else {
@@ -155,7 +155,7 @@ int libboot_qcdt_add_compatible_entries(void *dtb, boot_uint32_t dtb_size, dt_en
      */
     if (dtb_ver == DEV_TREE_VERSION_V1) {
         cur_dt_entry = (dt_entry_t *)
-                       libboot_platform_alloc(sizeof(dt_entry_t));
+                       libboot_alloc(sizeof(dt_entry_t));
 
         if (!cur_dt_entry) {
             LOGE("Out of memory\n");
@@ -202,7 +202,7 @@ int libboot_qcdt_add_compatible_entries(void *dtb, boot_uint32_t dtb_size, dt_en
                 continue;
             }
         }
-        libboot_platform_free(cur_dt_entry);
+        libboot_free(cur_dt_entry);
 
     }
     /*
@@ -219,12 +219,12 @@ int libboot_qcdt_add_compatible_entries(void *dtb, boot_uint32_t dtb_size, dt_en
         /* If we are using dtb v3.0, then we have split board, msm & pmic data in the DTB
         *  If we are using dtb v2.0, then we have split board & msmdata in the DTB
         */
-        board_data = (board_id_t *) libboot_platform_alloc(sizeof(board_id_t) * (len_board_id / BOARD_ID_SIZE));
+        board_data = (board_id_t *) libboot_alloc(sizeof(board_id_t) * (len_board_id / BOARD_ID_SIZE));
         LIBBOOT_ASSERT(board_data);
-        platform_data = (plat_id_t *) libboot_platform_alloc(sizeof(plat_id_t) * (len_plat_id / PLAT_ID_SIZE));
+        platform_data = (plat_id_t *) libboot_alloc(sizeof(plat_id_t) * (len_plat_id / PLAT_ID_SIZE));
         LIBBOOT_ASSERT(platform_data);
         if (dtb_ver == DEV_TREE_VERSION_V3) {
-            pmic_data = (pmic_id_t *) libboot_platform_alloc(sizeof(pmic_id_t) * (len_pmic_id / PMIC_ID_SIZE));
+            pmic_data = (pmic_id_t *) libboot_alloc(sizeof(pmic_id_t) * (len_pmic_id / PMIC_ID_SIZE));
             LIBBOOT_ASSERT(pmic_data);
         }
         i = 0;
@@ -281,16 +281,16 @@ int libboot_qcdt_add_compatible_entries(void *dtb, boot_uint32_t dtb_size, dt_en
                 msm_data_count * board_data_count * pmic_data_count) ||
                 (((boot_uint64_t)msm_data_count * (boot_uint64_t)board_data_count) != msm_data_count * board_data_count)) {
 
-            libboot_platform_free(board_data);
-            libboot_platform_free(platform_data);
+            libboot_free(board_data);
+            libboot_free(platform_data);
             if (pmic_data)
-                libboot_platform_free(pmic_data);
+                libboot_free(pmic_data);
             if (model)
-                libboot_platform_free(model);
+                libboot_free(model);
             return 0;
         }
 
-        dt_entry_array = (dt_entry_t *) libboot_platform_alloc(sizeof(dt_entry_t) * num_entries);
+        dt_entry_array = (dt_entry_t *) libboot_alloc(sizeof(dt_entry_t) * num_entries);
         LIBBOOT_ASSERT(dt_entry_array);
 
         /* If we have '<X>; <Y>; <Z>' as platform data & '<A>; <B>; <C>' as board data.
@@ -364,14 +364,14 @@ int libboot_qcdt_add_compatible_entries(void *dtb, boot_uint32_t dtb_size, dt_en
             }
         }
 
-        libboot_platform_free(board_data);
-        libboot_platform_free(platform_data);
+        libboot_free(board_data);
+        libboot_free(platform_data);
         if (pmic_data)
-            libboot_platform_free(pmic_data);
-        libboot_platform_free(dt_entry_array);
+            libboot_free(pmic_data);
+        libboot_free(dt_entry_array);
     }
     if (model)
-        libboot_platform_free(model);
+        libboot_free(model);
     return 1;
 }
 
@@ -401,7 +401,7 @@ void *libboot_qcdt_appended(void *kernel, boot_uint32_t kernel_size, boot_uint32
 
     /* Initialize the dtb entry node*/
     dt_entry_queue = (dt_entry_node_t *)
-                     libboot_platform_alloc(sizeof(dt_entry_node_t));
+                     libboot_alloc(sizeof(dt_entry_node_t));
 
     if (!dt_entry_queue) {
         LOGE("Out of memory\n");
@@ -458,7 +458,7 @@ void *libboot_qcdt_appended(void *kernel, boot_uint32_t kernel_size, boot_uint32
                 libboot_qcdt_pmic_target(0), libboot_qcdt_pmic_target(1),
                 libboot_qcdt_pmic_target(2), libboot_qcdt_pmic_target(3));
     }
-    /* libboot_platform_free queue's memory */
+    /* libboot_free queue's memory */
     libboot_list_for_every_entry(&dt_entry_queue->node, dt_node_tmp1, dt_entry_node_t, node) {
         dt_node_tmp2 = (dt_entry_node_t *) dt_node_tmp1->node.prev;
         dt_entry_list_delete(dt_node_tmp1);
@@ -896,7 +896,7 @@ int libboot_qcdt_get_entry_info(dt_table_t *table, dt_entry_t *dt_entry_info) {
     table_ptr = (unsigned char *)table + DEV_TREE_HEADER_SIZE;
     cur_dt_entry = &dt_entry_buf_1;
     best_match_dt_entry = NULL;
-    dt_entry_queue = (dt_entry_node_t *) libboot_platform_alloc(sizeof(dt_entry_node_t));
+    dt_entry_queue = (dt_entry_node_t *) libboot_alloc(sizeof(dt_entry_node_t));
 
     if (!dt_entry_queue) {
         LOGE("Out of memory\n");
@@ -970,7 +970,7 @@ int libboot_qcdt_get_entry_info(dt_table_t *table, dt_entry_t *dt_entry_info) {
             default:
                 LOGE("ERROR: Unsupported version (%d) in DT table \n",
                         table->version);
-                libboot_platform_free(dt_entry_queue);
+                libboot_free(dt_entry_queue);
                 return -1;
         }
 
@@ -1012,11 +1012,11 @@ int libboot_qcdt_get_entry_info(dt_table_t *table, dt_entry_t *dt_entry_info) {
             libboot_qcdt_target_id(), libboot_qcdt_hardware_subtype());
 
     libboot_list_for_every_entry(&dt_entry_queue->node, dt_node_tmp1, dt_entry_node_t, node) {
-        /* libboot_platform_free node memory */
+        /* libboot_free node memory */
         dt_node_tmp2 = (dt_entry_node_t *) dt_node_tmp1->node.prev;
         dt_entry_list_delete(dt_node_tmp1);
         dt_node_tmp1 = dt_node_tmp2;
     }
-    libboot_platform_free(dt_entry_queue);
+    libboot_free(dt_entry_queue);
     return -1;
 }

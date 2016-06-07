@@ -25,6 +25,15 @@ static libboot_list_node_t error_formats;
 static char* error_stack[LIBOOT_INTERNAL_ERROR_STACK_SIZE];
 static boot_uintn_t error_stack_count = 0;
 
+static libboot_list_node_t allocations;
+
+typedef struct {
+    libboot_list_node_t node;
+
+    boot_uintn_t addr;
+    boot_uintn_t size;
+} allocation_t;
+
 boot_uintn_t libboot_internal_strlcpy(char *dst, const char *src, boot_uintn_t size) {
 	boot_uintn_t srclen;
 
@@ -51,9 +60,9 @@ int libboot_internal_load_rawdata_to_kernel(bootimg_context_t* context) {
     if(!data) return -1;
 
     // read data
-    rc = libboot_internal_io_read(context->io, data, 0, size);
+    rc = libboot_internal_io_read(context->io, data, 0, size, &data);
     if(rc<0) {
-        libboot_platform_free(data);
+        libboot_free(data);
         return -1;
     }
     rc = 0;
@@ -71,25 +80,104 @@ void libboot_internal_tagmodule_register(tagmodule_t* mod) {
     libboot_list_add_tail(&tagmodules, &mod->node);
 }
 
+void* libboot_alloc(boot_uintn_t size) {
+    return libboot_platform_alloc(size);
+}
+
+void libboot_free(void *ptr) {
+    if(!ptr) return;
+
+    boot_uintn_t addr = (boot_uintn_t) ptr;
+    allocation_t *alloc;
+    libboot_list_for_every_entry(&allocations, alloc, allocation_t, node) {
+        if(addr>=alloc->addr && addr<alloc->addr+alloc->size) {
+            libboot_platform_free((void*)alloc->addr);
+            libboot_list_delete(&alloc->node);
+            libboot_platform_free(alloc);
+            return;
+        }
+    }
+
+    return libboot_platform_free(ptr);
+}
+
+void* libboot_bigalloc(boot_uintn_t size) {
+    return libboot_platform_bigalloc(size);
+}
+
+void libboot_bigfree(void* ptr) {
+    if(!ptr) return;
+
+    boot_uintn_t addr = (boot_uintn_t) ptr;
+    allocation_t *alloc;
+    libboot_list_for_every_entry(&allocations, alloc, allocation_t, node) {
+        if(addr>=alloc->addr && addr<alloc->addr+alloc->size) {
+            libboot_platform_bigfree((void*)alloc->addr);
+            libboot_list_delete(&alloc->node);
+            libboot_platform_free(alloc);
+            return;
+        }
+    }
+
+    return libboot_platform_bigfree(ptr);
+}
+
 void* libboot_internal_io_alloc(boot_io_t* io, boot_uintn_t sz) {
-    return libboot_platform_alloc(IO_ALIGN(io, sz));
+    boot_uintn_t allocsz = io->blksz + IO_ALIGN(io, sz);
+    void* mem = libboot_alloc(allocsz);
+    if(!mem) return NULL;
+
+    allocation_t* alloc = libboot_alloc(sizeof(allocation_t));
+    if(!alloc) {
+        libboot_free(mem);
+        return NULL;
+    }
+
+    alloc->addr = (boot_uintn_t)mem;
+    alloc->size = allocsz;
+
+    libboot_list_add_tail(&allocations, &alloc->node);
+
+    return mem;
 }
 
 void* libboot_internal_io_bigalloc(bootimg_context_t* context, boot_uintn_t sz) {
-    return libboot_platform_bigalloc(IO_ALIGN(context->io, sz));
+    boot_uintn_t allocsz = context->io->blksz + IO_ALIGN(context->io, sz);
+    void* mem = libboot_bigalloc(allocsz);
+    if(!mem) return NULL;
+
+    allocation_t* alloc = libboot_alloc(sizeof(allocation_t));
+    if(!alloc) {
+        libboot_free(mem);
+        return NULL;
+    }
+
+    alloc->addr = (boot_uintn_t)mem;
+    alloc->size = allocsz;
+
+    libboot_list_add_tail(&allocations, &alloc->node);
+
+    return mem;
 }
 
-boot_intn_t libboot_internal_io_read(boot_io_t* io, void* buf, boot_uintn_t off, boot_uintn_t sz) {
-    return io->read(io, buf, IO_ALIGN(io, off)/io->blksz, IO_ALIGN(io, sz)/io->blksz);
+boot_intn_t libboot_internal_io_read(boot_io_t* io, void* buf, boot_uintn_t off, boot_uintn_t sz, void** bufoff) {
+    boot_uintn_t off_aligned = ROUNDDOWN(off, io->blksz);
+    boot_uintn_t alignment_off = off - off_aligned;
+    boot_intn_t rc = io->read(io, buf, off_aligned/io->blksz, IO_ALIGN(io, alignment_off+sz)/io->blksz);
+    if(rc<=0) return rc;
+
+    *bufoff = buf + alignment_off;
+
+    return rc - alignment_off;
 }
 
-void libboot_internal_free_io(boot_io_t* io) {
+void libboot_internal_io_destroy(boot_io_t* io) {
     if(!io) return;
 
     if(io->pdata_is_allocated)
-        libboot_platform_free(io->pdata);
+        libboot_free(io->pdata);
 
-    libboot_platform_free(io);
+    libboot_free(io);
 }
 
 int libboot_identify(boot_io_t* io, bootimg_context_t* context) {
@@ -108,8 +196,7 @@ int libboot_identify(boot_io_t* io, bootimg_context_t* context) {
         else {
             boot_uint32_t* magic = libboot_internal_io_alloc(io, mod->magic_sz);
             if(!magic) return -1;
-
-            rc = libboot_internal_io_read(io, magic, mod->magic_off, mod->magic_sz);
+            rc = libboot_internal_io_read(io, magic, mod->magic_off, mod->magic_sz, (void**)&magic);
             if(rc<0) goto do_free;
             rc = 0;
 
@@ -117,12 +204,12 @@ int libboot_identify(boot_io_t* io, bootimg_context_t* context) {
                 type = mod->type;
 
         do_free:
-            libboot_platform_free(magic);
+            libboot_free(magic);
         }
 
         // we have a match
         if(type!=BOOTIMG_TYPE_UNKNOWN) {
-            libboot_internal_free_io(context->io);
+            libboot_internal_io_destroy(context->io);
             context->type = type;
             context->io = io;
 
@@ -136,7 +223,7 @@ int libboot_identify(boot_io_t* io, bootimg_context_t* context) {
 
     // no match
     if(type==BOOTIMG_TYPE_UNKNOWN) {
-        libboot_internal_free_io(context->io);
+        libboot_internal_io_destroy(context->io);
 
         // this is the first scan and we don't have a match!
         if(context->outer_type==BOOTIMG_TYPE_UNKNOWN) {
@@ -169,7 +256,7 @@ static boot_intn_t internal_io_fn_mem_read(boot_io_t* io, void* buf, boot_uintn_
 }
 
 int libboot_identify_memory(void* mem, boot_uintn_t sz, bootimg_context_t* context) {
-    boot_io_t* io = libboot_platform_alloc(sizeof(boot_io_t));
+    boot_io_t* io = libboot_alloc(sizeof(boot_io_t));
     if(!io) return -1;
     io->read = internal_io_fn_mem_read;
     io->blksz = 1;
@@ -179,14 +266,14 @@ int libboot_identify_memory(void* mem, boot_uintn_t sz, bootimg_context_t* conte
 
     int rc = libboot_identify(io, context);
     if(rc) {
-        libboot_platform_free(io);
+        libboot_free(io);
     }
 
     return rc;
 }
 
 void libboot_internal_register_error(libboot_error_group_t group, libboot_error_type_t type, const char* fmt) {
-    libboot_error_format_t* format = libboot_platform_alloc(sizeof(libboot_error_format_t));
+    libboot_error_format_t* format = libboot_alloc(sizeof(libboot_error_format_t));
     if(!format) return;
 
     format->group = group;
@@ -211,7 +298,7 @@ char* libboot_internal_error_stack_alloc(void) {
     if(error_stack_count>=LIBOOT_INTERNAL_ERROR_STACK_SIZE)
         return NULL;
 
-    char* buf = libboot_platform_alloc(4096);
+    char* buf = libboot_alloc(4096);
     if(!buf) return NULL;
 
     buf[0] = 0;
@@ -230,7 +317,7 @@ boot_uintn_t libboot_error_stack_count(void) {
 void libboot_error_stack_reset(void) {
     boot_uintn_t i;
     for(i=0; i<error_stack_count; i++) {
-        libboot_platform_free(error_stack[i]);
+        libboot_free(error_stack[i]);
     }
 
     error_stack_count = 0;
@@ -262,6 +349,8 @@ int libboot_init(void) {
     libboot_internal_register_error(LIBBOOT_ERROR_GROUP_ANDROID, LIBBOOT_ERROR_ANDROID_ALLOC_CMDLINE, "can't allocate cmdline");
     libboot_internal_register_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_OUT_OF_MEMORY, "can't allocate memory");
 
+    libboot_list_initialize(&allocations);
+
     return 0;
 }
 
@@ -277,10 +366,10 @@ void libboot_init_context(bootimg_context_t* context) {
 void libboot_free_context(bootimg_context_t* context) {
     if(!context) return;
 
-    libboot_platform_free(context->io);
-    libboot_platform_bigfree(context->kernel_data);
-    libboot_platform_bigfree(context->ramdisk_data);
-    libboot_platform_bigfree(context->tags_data);
+    libboot_free(context->io);
+    libboot_bigfree(context->kernel_data);
+    libboot_bigfree(context->ramdisk_data);
+    libboot_bigfree(context->tags_data);
     libboot_cmdline_free(&context->cmdline);
 }
 

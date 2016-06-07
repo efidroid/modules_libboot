@@ -41,12 +41,12 @@ static int tagmodule_patch(bootimg_context_t* context) {
     }
 
     // allocate data
-    void* data = libboot_platform_bigalloc(dt_entry.size);
+    void* data = libboot_bigalloc(dt_entry.size);
     if(!data) return -1;
 
     // copy fdt
     libboot_platform_memmove(data, (boot_uint8_t*)(table) + dt_entry.offset, dt_entry.size);
-    libboot_platform_bigfree(context->tags_data);
+    libboot_bigfree(context->tags_data);
     context->tags_data = data;
     context->tags_size = dt_entry.size;
     context->tags_type = LIBBOOT_TAGS_TYPE_FDT;

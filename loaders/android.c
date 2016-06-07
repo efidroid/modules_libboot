@@ -29,7 +29,7 @@ static int ldrmodule_load(bootimg_context_t* context) {
     boot_img_hdr* hdr = libboot_internal_io_alloc(context->io, sizeof(boot_img_hdr));
     if(!hdr) goto out;
 
-    rc = libboot_internal_io_read(context->io, hdr, 0, sizeof(*hdr));
+    rc = libboot_internal_io_read(context->io, hdr, 0, sizeof(*hdr), (void**)&hdr);
     if(rc<0) goto out;
 
     if(hdr->second_size!=0) {
@@ -52,7 +52,7 @@ static int ldrmodule_load(bootimg_context_t* context) {
     boot_uintn_t kernel_size = hdr->kernel_size;
     kernel_data = libboot_internal_io_bigalloc(context, kernel_size);
     if(!kernel_data) goto err_free;
-    rc = libboot_internal_io_read(context->io, kernel_data, off_kernel, kernel_size);
+    rc = libboot_internal_io_read(context->io, kernel_data, off_kernel, kernel_size, &kernel_data);
     if(rc<0) {
         libboot_format_error(LIBBOOT_ERROR_GROUP_ANDROID, LIBBOOT_ERROR_ANDROID_READ_KERNEL, rc);
         goto err_free;
@@ -63,7 +63,7 @@ static int ldrmodule_load(bootimg_context_t* context) {
     if(ramdisk_size>0) {
         ramdisk_data = libboot_internal_io_bigalloc(context, ramdisk_size);
         if(!ramdisk_data) goto err_free;
-        rc = libboot_internal_io_read(context->io, ramdisk_data, off_ramdisk, ramdisk_size);
+        rc = libboot_internal_io_read(context->io, ramdisk_data, off_ramdisk, ramdisk_size, &ramdisk_data);
         if(rc<0) {
             libboot_format_error(LIBBOOT_ERROR_GROUP_ANDROID, LIBBOOT_ERROR_ANDROID_READ_RAMDISK, rc);
             goto err_free;
@@ -75,7 +75,7 @@ static int ldrmodule_load(bootimg_context_t* context) {
     if(tags_size>0) {
         tags_data = libboot_internal_io_bigalloc(context, tags_size);
         if(!tags_data) goto err_free;
-        rc = libboot_internal_io_read(context->io, tags_data, off_tags, tags_size);
+        rc = libboot_internal_io_read(context->io, tags_data, off_tags, tags_size, &tags_data);
         if(rc<0) {
             libboot_format_error(LIBBOOT_ERROR_GROUP_ANDROID, LIBBOOT_ERROR_ANDROID_READ_TAGS, rc);
             goto err_free;
@@ -95,9 +95,9 @@ static int ldrmodule_load(bootimg_context_t* context) {
     context->kernel_is_linux = 1;
 
     // remove old data
-    libboot_platform_bigfree(context->kernel_data);
-    libboot_platform_bigfree(context->ramdisk_data);
-    libboot_platform_bigfree(context->tags_data);
+    libboot_bigfree(context->kernel_data);
+    libboot_bigfree(context->ramdisk_data);
+    libboot_bigfree(context->tags_data);
 
     // set new data
     context->kernel_data = kernel_data;
@@ -117,12 +117,12 @@ static int ldrmodule_load(bootimg_context_t* context) {
     goto out;
 
 err_free:
-    libboot_platform_bigfree(kernel_data);
-    libboot_platform_bigfree(ramdisk_data);
-    libboot_platform_bigfree(tags_data);
+    libboot_bigfree(kernel_data);
+    libboot_bigfree(ramdisk_data);
+    libboot_bigfree(tags_data);
 
 out:
-    libboot_platform_free(hdr);
+    libboot_free(hdr);
 
     return ret;
 }
@@ -134,14 +134,14 @@ static boot_uint32_t ldrmodule_checksum(bootimg_context_t* context) {
     boot_img_hdr* hdr = libboot_internal_io_alloc(context->io, sizeof(boot_img_hdr));
     if(!hdr) goto out;
 
-    rc = libboot_internal_io_read(context->io, hdr, 0, sizeof(*hdr));
+    rc = libboot_internal_io_read(context->io, hdr, 0, sizeof(*hdr), (void**)&hdr);
     if(rc<0) goto out;
 
     // calculate checksum
     ret = libboot_crc32(0, (void*)hdr, sizeof(boot_img_hdr));
 
 out:
-    libboot_platform_free(hdr);
+    libboot_free(hdr);
 
     return ret;
 }

@@ -24,12 +24,12 @@
 
 static void zlib_free(voidpf qpaque, void* addr) {
     (void)(qpaque);
-	return libboot_platform_free(addr);
+	return libboot_free(addr);
 }
 
 static void *zlib_alloc(voidpf qpaque, uInt items, uInt size) {
     (void)(qpaque);
-	return libboot_platform_alloc(items * size);
+	return libboot_alloc(items * size);
 }
 
 /* decompress gzip file "in_buf", return 0 if decompressed successful,
@@ -57,7 +57,7 @@ static int decompress(unsigned char *in_buf, unsigned int in_len,
 		return rc;
 	}
 
-	stream = libboot_platform_alloc(sizeof(*stream));
+	stream = libboot_alloc(sizeof(*stream));
 	if (stream == NULL) {
 		return rc;
 	}
@@ -102,7 +102,7 @@ static int decompress(unsigned char *in_buf, unsigned int in_len,
 		*out_len = stream->total_out;
 
 gunzip_end:
-	libboot_platform_free(stream);
+	libboot_free(stream);
 	return rc; /* returns 0 if decompressed successful */
 }
 
@@ -128,7 +128,7 @@ static int ldrmodule_load(bootimg_context_t* context) {
     if(!size) return -1;
 
     // get size
-    rc = libboot_internal_io_read(context->io, size, imgsize-sizeof(*size), sizeof(*size));
+    rc = libboot_internal_io_read(context->io, size, imgsize-sizeof(*size), sizeof(*size), (void**)&size);
     if(rc<0) {
         goto out;
     }
@@ -150,7 +150,7 @@ static int ldrmodule_load(bootimg_context_t* context) {
     libboot_identify_memory(data, out_len, context);
 
     // replace kernel data
-    libboot_platform_bigfree(context->kernel_data);
+    libboot_bigfree(context->kernel_data);
     context->kernel_data = data;
     context->kernel_size = out_len;
 
@@ -160,10 +160,10 @@ static int ldrmodule_load(bootimg_context_t* context) {
     goto out;
 
 out_free:
-    libboot_platform_bigfree(data);
+    libboot_bigfree(data);
 
 out:
-    libboot_platform_free(size);
+    libboot_free(size);
 
     return rc;
 }

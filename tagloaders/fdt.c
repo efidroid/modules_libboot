@@ -172,7 +172,7 @@ static int tagmodule_patch(bootimg_context_t* context) {
 
     // allocate fdt copy with padding
     boot_uintn_t newsize = fdt_totalsize(context->tags_data) + DTB_PAD_SIZE;
-    fdt = libboot_platform_bigalloc(newsize);
+    fdt = libboot_bigalloc(newsize);
     if(!fdt) goto out;
 
     // copy fdt to new memory
@@ -191,11 +191,11 @@ static int tagmodule_patch(bootimg_context_t* context) {
     // cmdline
     boot_uintn_t cmdline_len = libboot_cmdline_length(&context->cmdline);
     if(cmdline_len) {
-        char* cmdline = libboot_platform_bigalloc(cmdline_len);
+        char* cmdline = libboot_bigalloc(cmdline_len);
         libboot_cmdline_generate(&context->cmdline, cmdline, cmdline_len);
 
         rc = fdt_appendprop_string(fdt, offset, "bootargs", cmdline);
-        libboot_platform_bigfree(cmdline);
+        libboot_bigfree(cmdline);
         if (rc) goto out_free;
     }
 
@@ -216,7 +216,7 @@ static int tagmodule_patch(bootimg_context_t* context) {
     fdt_pack(fdt);
 
     // free old fdt
-    libboot_platform_bigfree(context->tags_data);
+    libboot_bigfree(context->tags_data);
 
     // set new fdt
     context->tags_data = fdt;
@@ -227,7 +227,7 @@ static int tagmodule_patch(bootimg_context_t* context) {
     goto out;
 
 out_free:
-    libboot_platform_bigfree(fdt);
+    libboot_bigfree(fdt);
 
 out:
     return ret;

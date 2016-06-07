@@ -104,9 +104,9 @@ unsigned long libboot_crc32(unsigned long crc, const unsigned char* buf, unsigne
 
 // IO
 void* libboot_internal_io_alloc(boot_io_t* io, boot_uintn_t sz);
-boot_intn_t libboot_internal_io_read(boot_io_t* io, void* buf, boot_uintn_t off, boot_uintn_t sz);
+boot_intn_t libboot_internal_io_read(boot_io_t* io, void* buf, boot_uintn_t off, boot_uintn_t sz, void** bufoff);
 void* libboot_internal_io_bigalloc(bootimg_context_t* context, boot_uintn_t sz);
-void libboot_internal_free_io(boot_io_t* io);
+void libboot_internal_io_destroy(boot_io_t* io);
 
 boot_uintn_t libboot_internal_strlcpy(char *dst, const char *src, boot_uintn_t size);
 
