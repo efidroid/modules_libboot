@@ -106,11 +106,14 @@ gunzip_end:
 	return rc; /* returns 0 if decompressed successful */
 }
 
-static int ldrmodule_load(bootimg_context_t* context) {
+static int ldrmodule_load(bootimg_context_t* context, boot_uintn_t type, boot_uint8_t recursive) {
     int rc;
-	unsigned int out_len = 0;
-	unsigned int pos = 0;
+    unsigned int out_len = 0;
+    unsigned int pos = 0;
     void* data = NULL;
+
+    if(!(type&LIBBOOT_LOAD_TYPE_KERNEL))
+        return 0;
 
     // we're first, just load the whole thing into memory
     // TODO: remove this and use chunk based decompression

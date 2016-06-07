@@ -50,11 +50,14 @@ out:
     return ret;
 }
 
-static int ldrmodule_load(bootimg_context_t* context) {
+static int ldrmodule_load(bootimg_context_t* context, boot_uintn_t type, boot_uint8_t recursive) {
     int rc;
     int ret = -1;
 
     void* kernel_data = NULL;
+
+    if(!(type&LIBBOOT_LOAD_TYPE_KERNEL))
+        return 0;
 
     // allocate header
     qcom_bootimg_t* hdr = libboot_internal_io_alloc(context->io, sizeof(qcom_bootimg_t));
@@ -74,9 +77,6 @@ static int ldrmodule_load(bootimg_context_t* context) {
         goto err_free;
     }
 
-    // re-identify with kernel as image
-    libboot_identify_memory(kernel_data, kernel_size, context);
-
     // replace kernel data
     libboot_bigfree(context->kernel_data);
     context->kernel_data = kernel_data;
@@ -85,6 +85,7 @@ static int ldrmodule_load(bootimg_context_t* context) {
     // set kernel address
     context->kernel_addr = hdr->image_dest_ptr;
     context->kernel_is_linux = 0;
+    context->type = BOOTIMG_TYPE_RAW;
 
     ret = 0;
     goto out;

@@ -19,7 +19,11 @@
 
 static boot_uintn_t magic_val = 0x016f2818;
 
-static int ldrmodule_load(bootimg_context_t* context) {
+static int ldrmodule_load(bootimg_context_t* context, boot_uintn_t type, boot_uint8_t recursive) {
+
+    if(!(type&LIBBOOT_LOAD_TYPE_KERNEL))
+        return 0;
+
     // we're first, just load the whole zImage into memory
     if(!context->kernel_data) {
         if(libboot_internal_load_rawdata_to_kernel(context))

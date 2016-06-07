@@ -35,7 +35,7 @@
 
 // LOADERS
 typedef int (*ldrmodule_magictest_t)(boot_io_t* io);
-typedef int (*ldrmodule_load_t)(bootimg_context_t* context);
+typedef int (*ldrmodule_load_t)(bootimg_context_t* context, boot_uintn_t type, boot_uint8_t recursive);
 typedef boot_uint32_t (*ldrmodule_checksum_t)(bootimg_context_t* context);
 
 typedef struct {

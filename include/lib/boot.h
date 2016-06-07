@@ -19,6 +19,12 @@
 
 #include <lib/boot/boot_platform.h>
 
+#define LIBBOOT_LOAD_TYPE_KERNEL 1
+#define LIBBOOT_LOAD_TYPE_RAMDISK 2
+#define LIBBOOT_LOAD_TYPE_TAGS 4
+#define LIBBOOT_LOAD_TYPE_CMDLINE 8
+#define LIBBOOT_LOAD_TYPE_ALL 0xffffffff
+
 // LIST
 struct libboot_list_node {
     struct libboot_list_node *prev;
@@ -147,6 +153,7 @@ void libboot_free_context(bootimg_context_t* context);
 int libboot_identify(boot_io_t* io, bootimg_context_t* context);
 int libboot_identify_memory(void* mem, boot_uintn_t sz, bootimg_context_t* context);
 int libboot_load(bootimg_context_t* context);
+int libboot_load_partial(bootimg_context_t* context, boot_uintn_t type, boot_uint8_t recursive);
 int libboot_prepare(bootimg_context_t* context);
 
 // cmdline

@@ -373,9 +373,16 @@ void libboot_free_context(bootimg_context_t* context) {
     libboot_cmdline_free(&context->cmdline);
 }
 
-int libboot_load(bootimg_context_t* context) {
+int libboot_load_partial(bootimg_context_t* context, boot_uintn_t type, boot_uint8_t recursive) {
     int rc = 0;
     int matched;
+
+    // the image wasn't identified correctly
+    if(context->type==BOOTIMG_TYPE_UNKNOWN)
+        return -1;
+
+    if(!context->io)
+        return -1;
 
     while(context->type!=BOOTIMG_TYPE_RAW) {
         matched = 0;
@@ -384,7 +391,7 @@ int libboot_load(bootimg_context_t* context) {
         libboot_list_for_every_entry(&ldrmodules, mod, ldrmodule_t, node) {
             if(mod->load && mod->type==context->type) {
                 // load
-                rc = mod->load(context);
+                rc = mod->load(context, type, recursive);
 
                 // abort on error
                 if(rc) return rc;
@@ -396,14 +403,25 @@ int libboot_load(bootimg_context_t* context) {
         }
 
         // abort
-        if(!matched) break;
+        if(!matched) {
+            rc = -1;
+            break;
+        }
+
+        if(!recursive) break;
     }
 
-    // no kernel was loaded
-    if(context->type==BOOTIMG_TYPE_RAW && !context->kernel_data)
-        rc = -1;
+
+    if(!rc && recursive) {
+        libboot_internal_io_destroy(context->io);
+        context->io = NULL;
+    }
 
     return rc;
+}
+
+int libboot_load(bootimg_context_t* context) {
+    return libboot_load_partial(context, LIBBOOT_LOAD_TYPE_ALL, 1);
 }
 
 static int libboot_identify_tags(bootimg_context_t* context) {
@@ -492,7 +510,12 @@ static int libboot_generate_tags(bootimg_context_t* context) {
 int libboot_prepare(bootimg_context_t* context) {
     int rc;
 
+    // the image wasn't loaded correctly
     if(context->type!=BOOTIMG_TYPE_RAW)
+        return -1;
+
+    // libboot_load destroys the IO struct
+    if(context->io)
         return -1;
 
     context->kernel_arguments[0] = 0;
