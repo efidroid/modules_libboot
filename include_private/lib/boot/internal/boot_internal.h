@@ -19,6 +19,7 @@
 
 #include <lib/boot.h>
 #include <lib/boot/internal/list.h>
+#include <lib/boot/internal/platform.h>
 
 // stdlib
 #ifndef NULL

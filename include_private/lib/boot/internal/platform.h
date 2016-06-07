@@ -14,10 +14,9 @@
  * limitations under the License.
 */
 
-#ifndef LIB_BOOT_PLATFORM_COMMON_H
-#define LIB_BOOT_PLATFORM_COMMON_H
+#ifndef LIB_BOOT_INTERNAL_PLATFORM_H
+#define LIB_BOOT_INTERNAL_PLATFORM_H
 
-#include <lib/boot/boot_platform.h>
 typedef void* (*libboot_platform_getmemory_callback_t)(void* pdata, boot_uintn_t addr, boot_uintn_t size);
 
 boot_uint32_t libboot_qcdt_pmic_target(boot_uint8_t num_ent);
@@ -48,4 +47,4 @@ void* libboot_platform_bigalloc(boot_uintn_t sz);
 void  libboot_platform_bigfree(void* ptr);
 void* libboot_platform_getmemory(void *pdata, libboot_platform_getmemory_callback_t cb);
 
-#endif // LIB_BOOT_PLATFORM_COMMON_H
+#endif // LIB_BOOT_INTERNAL_PLATFORM_H

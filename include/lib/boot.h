@@ -17,7 +17,7 @@
 #ifndef LIB_BOOT_H
 #define LIB_BOOT_H
 
-#include <lib/boot/boot_platform_common.h>
+#include <lib/boot/boot_platform.h>
 
 // LIST
 struct libboot_list_node {
