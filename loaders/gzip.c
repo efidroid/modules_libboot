@@ -137,7 +137,7 @@ static int ldrmodule_load(bootimg_context_t* context, boot_uintn_t type, boot_ui
     }
 
     // allocate data
-    data = libboot_internal_io_bigalloc(context, *size);
+    data = libboot_internal_io_alloc(context->io, *size);
     if(!data) {
         rc = -1;
         goto out;
@@ -153,7 +153,7 @@ static int ldrmodule_load(bootimg_context_t* context, boot_uintn_t type, boot_ui
     libboot_identify_memory(data, out_len, context);
 
     // replace kernel data
-    libboot_bigfree(context->kernel_data);
+    libboot_free(context->kernel_data);
     context->kernel_data = data;
     context->kernel_size = out_len;
 
@@ -163,7 +163,7 @@ static int ldrmodule_load(bootimg_context_t* context, boot_uintn_t type, boot_ui
     goto out;
 
 out_free:
-    libboot_bigfree(data);
+    libboot_free(data);
 
 out:
     libboot_free(size);

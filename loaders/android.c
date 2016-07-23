@@ -54,7 +54,7 @@ static int ldrmodule_load(bootimg_context_t* context, boot_uintn_t type, boot_ui
     // load kernel
     if(type&LIBBOOT_LOAD_TYPE_KERNEL) {
         kernel_size = hdr->kernel_size;
-        kernel_data = libboot_internal_io_bigalloc(context, kernel_size);
+        kernel_data = libboot_internal_io_alloc(context->io, kernel_size);
         if(!kernel_data) goto err_free;
         rc = libboot_internal_io_read(context->io, kernel_data, off_kernel, kernel_size, &kernel_data);
         if(rc<0) {
@@ -67,7 +67,7 @@ static int ldrmodule_load(bootimg_context_t* context, boot_uintn_t type, boot_ui
     if(type&LIBBOOT_LOAD_TYPE_RAMDISK) {
         ramdisk_size = hdr->ramdisk_size;
         if(ramdisk_size>0) {
-            ramdisk_data = libboot_internal_io_bigalloc(context, ramdisk_size);
+            ramdisk_data = libboot_internal_io_alloc(context->io, ramdisk_size);
             if(!ramdisk_data) goto err_free;
             rc = libboot_internal_io_read(context->io, ramdisk_data, off_ramdisk, ramdisk_size, &ramdisk_data);
             if(rc<0) {
@@ -81,7 +81,7 @@ static int ldrmodule_load(bootimg_context_t* context, boot_uintn_t type, boot_ui
     if(type&LIBBOOT_LOAD_TYPE_TAGS) {
         tags_size = hdr->dt_size;
         if(tags_size>0) {
-            tags_data = libboot_internal_io_bigalloc(context, tags_size);
+            tags_data = libboot_internal_io_alloc(context->io, tags_size);
             if(!tags_data) goto err_free;
             rc = libboot_internal_io_read(context->io, tags_data, off_tags, tags_size, &tags_data);
             if(rc<0) {
@@ -105,11 +105,11 @@ static int ldrmodule_load(bootimg_context_t* context, boot_uintn_t type, boot_ui
 
     // remove old data
     if(type&LIBBOOT_LOAD_TYPE_KERNEL)
-        libboot_bigfree(context->kernel_data);
+        libboot_free(context->kernel_data);
     if(type&LIBBOOT_LOAD_TYPE_RAMDISK)
-        libboot_bigfree(context->ramdisk_data);
+        libboot_free(context->ramdisk_data);
     if(type&LIBBOOT_LOAD_TYPE_TAGS)
-        libboot_bigfree(context->tags_data);
+        libboot_free(context->tags_data);
 
     // set new data
     if(type&LIBBOOT_LOAD_TYPE_KERNEL) {
@@ -142,9 +142,9 @@ static int ldrmodule_load(bootimg_context_t* context, boot_uintn_t type, boot_ui
     goto out;
 
 err_free:
-    libboot_bigfree(kernel_data);
-    libboot_bigfree(ramdisk_data);
-    libboot_bigfree(tags_data);
+    libboot_free(kernel_data);
+    libboot_free(ramdisk_data);
+    libboot_free(tags_data);
 
 out:
     libboot_free(hdr);

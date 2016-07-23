@@ -56,7 +56,7 @@ int libboot_internal_load_rawdata_to_kernel(bootimg_context_t* context) {
     boot_uintn_t size = context->io->numblocks*context->io->blksz;
 
     // allocate data
-    void* data = libboot_internal_io_bigalloc(context, size);
+    void* data = libboot_internal_io_alloc(context->io, size);
     if(!data) return -1;
 
     // read data
@@ -101,49 +101,9 @@ void libboot_free(void *ptr) {
     return libboot_platform_free(ptr);
 }
 
-void* libboot_bigalloc(boot_uintn_t size) {
-    return libboot_platform_bigalloc(size);
-}
-
-void libboot_bigfree(void* ptr) {
-    if(!ptr) return;
-
-    boot_uintn_t addr = (boot_uintn_t) ptr;
-    allocation_t *alloc;
-    libboot_list_for_every_entry(&allocations, alloc, allocation_t, node) {
-        if(addr>=alloc->addr && addr<alloc->addr+alloc->size) {
-            libboot_platform_bigfree((void*)alloc->addr);
-            libboot_list_delete(&alloc->node);
-            libboot_platform_free(alloc);
-            return;
-        }
-    }
-
-    return libboot_platform_bigfree(ptr);
-}
-
 void* libboot_internal_io_alloc(boot_io_t* io, boot_uintn_t sz) {
     boot_uintn_t allocsz = io->blksz + IO_ALIGN(io, sz);
     void* mem = libboot_alloc(allocsz);
-    if(!mem) return NULL;
-
-    allocation_t* alloc = libboot_alloc(sizeof(allocation_t));
-    if(!alloc) {
-        libboot_free(mem);
-        return NULL;
-    }
-
-    alloc->addr = (boot_uintn_t)mem;
-    alloc->size = allocsz;
-
-    libboot_list_add_tail(&allocations, &alloc->node);
-
-    return mem;
-}
-
-void* libboot_internal_io_bigalloc(bootimg_context_t* context, boot_uintn_t sz) {
-    boot_uintn_t allocsz = context->io->blksz + IO_ALIGN(context->io, sz);
-    void* mem = libboot_bigalloc(allocsz);
     if(!mem) return NULL;
 
     allocation_t* alloc = libboot_alloc(sizeof(allocation_t));
@@ -367,9 +327,9 @@ void libboot_free_context(bootimg_context_t* context) {
     if(!context) return;
 
     libboot_free(context->io);
-    libboot_bigfree(context->kernel_data);
-    libboot_bigfree(context->ramdisk_data);
-    libboot_bigfree(context->tags_data);
+    libboot_free(context->kernel_data);
+    libboot_free(context->ramdisk_data);
+    libboot_free(context->tags_data);
     libboot_cmdline_free(&context->cmdline);
 }
 

@@ -69,7 +69,7 @@ static int ldrmodule_load(bootimg_context_t* context, boot_uintn_t type, boot_ui
 
     // load kernel
     boot_uintn_t kernel_size = hdr->code_size;
-    kernel_data = libboot_internal_io_bigalloc(context, kernel_size);
+    kernel_data = libboot_internal_io_alloc(context->io, kernel_size);
     if(!kernel_data) goto out;
     rc = libboot_internal_io_read(context->io, kernel_data, sizeof(*hdr) + hdr->image_src, kernel_size, &kernel_data);
     if(rc<0) {
@@ -78,7 +78,7 @@ static int ldrmodule_load(bootimg_context_t* context, boot_uintn_t type, boot_ui
     }
 
     // replace kernel data
-    libboot_bigfree(context->kernel_data);
+    libboot_free(context->kernel_data);
     context->kernel_data = kernel_data;
     context->kernel_size = kernel_size;
 
@@ -91,7 +91,7 @@ static int ldrmodule_load(bootimg_context_t* context, boot_uintn_t type, boot_ui
     goto out;
 
 err_free:
-    libboot_bigfree(kernel_data);
+    libboot_free(kernel_data);
 
 out:
     libboot_free(hdr);

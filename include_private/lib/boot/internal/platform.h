@@ -43,8 +43,6 @@ boot_uintn_t libboot_platform_strlen(const char* str);
 boot_uintn_t libboot_platform_machtype(void);
 void* libboot_platform_bootalloc(boot_uintn_t addr, boot_uintn_t sz);
 void  libboot_platform_bootfree(boot_uintn_t addr, boot_uintn_t sz);
-void* libboot_platform_bigalloc(boot_uintn_t sz);
-void  libboot_platform_bigfree(void* ptr);
 void* libboot_platform_getmemory(void *pdata, libboot_platform_getmemory_callback_t cb);
 
 #endif // LIB_BOOT_INTERNAL_PLATFORM_H

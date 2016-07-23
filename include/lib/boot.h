@@ -143,8 +143,6 @@ typedef struct bootimg_context bootimg_context_t;
 // memory allocations
 void* libboot_alloc(boot_uintn_t size);
 void  libboot_free(void *ptr);
-void* libboot_bigalloc(boot_uintn_t sz);
-void  libboot_bigfree(void* ptr);
 
 // basic loading
 int libboot_init(void);
