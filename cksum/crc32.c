@@ -184,10 +184,11 @@ local void write_table(out, table)
 #define DO8 DO1; DO1; DO1; DO1; DO1; DO1; DO1; DO1
 
 /* ========================================================================= */
-unsigned long ZEXPORT libboot_crc32(crc, buf, len)
-    unsigned long crc;
-    const unsigned char FAR *buf;
-    uInt len;
+unsigned long ZEXPORT libboot_crc32(
+    unsigned long crc,
+    const unsigned char FAR *buf,
+    uInt len
+)
 {
     if (buf == Z_NULL) return 0UL;
 
