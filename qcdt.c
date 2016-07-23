@@ -31,14 +31,6 @@
 #include <lib/boot/internal/qcdt.h>
 #include <libfdt.h>
 
-typedef struct {
-    boot_uint32_t platform_id;
-    boot_uint32_t variant_id;
-    boot_uint32_t soc_rev;
-    boot_uint32_t offset;
-    boot_uint32_t size;
-} dt_entry_v1_t;
-
 //static dt_mem_node_info_t mem_node;
 static int devtree_entry_is_excact_match(dt_entry_t *cur_dt_entry, dt_entry_node_t *dt_list);
 static dt_entry_t *devtree_get_best_entry(dt_entry_node_t *dt_list);

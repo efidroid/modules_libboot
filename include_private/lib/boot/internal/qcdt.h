@@ -60,6 +60,14 @@
 typedef struct {
     boot_uint32_t platform_id;
     boot_uint32_t variant_id;
+    boot_uint32_t soc_rev;
+    boot_uint32_t offset;
+    boot_uint32_t size;
+} dt_entry_v1_t;
+
+typedef struct {
+    boot_uint32_t platform_id;
+    boot_uint32_t variant_id;
     boot_uint32_t board_hw_subtype;
     boot_uint32_t soc_rev;
     boot_uint32_t offset;
