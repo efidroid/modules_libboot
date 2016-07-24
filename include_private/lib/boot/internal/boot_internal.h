@@ -95,7 +95,7 @@ char *libboot_internal_error_stack_alloc(void);
     if(!buf) break; \
     libboot_error_format_t *format = libboot_internal_get_error_format(group, type); \
     if(format) libboot_platform_format_string(buf, 4096, format->fmt, ##__VA_ARGS__); \
-    else libboot_platform_format_string(buf, 4096, "unknown error "LIBBOOT_FMT_UINTN" in group "LIBBOOT_FMT_UINTN, group, type); \
+    else libboot_platform_format_string(buf, 4096, "unknown error %"LIBBOOT_FMT_UINTN" in group "LIBBOOT_FMT_UINTN, group, type); \
 } while(0)
 void libboot_internal_register_error(libboot_error_group_t group, libboot_error_type_t type, const char *fmt);
 

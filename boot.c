@@ -106,7 +106,7 @@ void *libboot_alloc(boot_uintn_t size)
     libboot_list_add_tail(&allocations, &alloc->node);
 
 #if DEBUG_ALLOCATIONS
-    LOGI("ALLOC=0x%08lx size=%lu refs=%lu\n", alloc->addr, alloc->size, alloc->refs);
+    LOGI("ALLOC=0x%08"LIBBOOT_FMT_ADDR" size=%"LIBBOOT_FMT_UINTN" refs=%"LIBBOOT_FMT_UINTN"\n", alloc->addr, alloc->size, alloc->refs);
 #endif
 
     return mem;
@@ -126,7 +126,7 @@ void *libboot_refalloc(void *ptr, boot_uintn_t size)
 
             alloc->refs++;
 #if DEBUG_ALLOCATIONS
-            LOGI("REFALLOC=0x%08lx size=%lu refs=%lu\n", alloc->addr, alloc->size, alloc->refs);
+            LOGI("REFALLOC=0x%08"LIBBOOT_FMT_ADDR" size=%"LIBBOOT_FMT_UINTN" refs=%"LIBBOOT_FMT_UINTN"\n", alloc->addr, alloc->size, alloc->refs);
 #endif
             return ptr;
         }
@@ -162,7 +162,7 @@ void libboot_free(void *ptr)
 
             if (alloc->refs<=0) {
 #if DEBUG_ALLOCATIONS
-                LOGI("FREE=0x%08lx size=%lu refs=%lu\n", alloc->addr, alloc->size, alloc->refs);
+                LOGI("FREE=0x%08"LIBBOOT_FMT_ADDR" size=%"LIBBOOT_FMT_UINTN" refs=%"LIBBOOT_FMT_UINTN"\n", alloc->addr, alloc->size, alloc->refs);
 #endif
 
                 libboot_platform_free((void *)alloc->addr);
@@ -172,7 +172,7 @@ void libboot_free(void *ptr)
 
             else {
 #if DEBUG_ALLOCATIONS
-                LOGI("DEREF=0x%08lx size=%lu refs=%lu\n", alloc->addr, alloc->size, alloc->refs);
+                LOGI("DEREF=0x%08"LIBBOOT_FMT_ADDR" size=%"LIBBOOT_FMT_UINTN" refs=%"LIBBOOT_FMT_UINTN"\n", alloc->addr, alloc->size, alloc->refs);
 #endif
             }
             return;
@@ -390,11 +390,11 @@ int libboot_init(void)
 
     // error messages
     libboot_list_initialize(&error_formats);
-    libboot_internal_register_error(LIBBOOT_ERROR_GROUP_ANDROID, LIBBOOT_ERROR_ANDROID_SECOND_UNSUPPORTED, "secondary loaders are not supported. size: "LIBBOOT_FMT_UINT32);
+    libboot_internal_register_error(LIBBOOT_ERROR_GROUP_ANDROID, LIBBOOT_ERROR_ANDROID_SECOND_UNSUPPORTED, "secondary loaders are not supported. size: %"LIBBOOT_FMT_UINT32);
     libboot_internal_register_error(LIBBOOT_ERROR_GROUP_ANDROID, LIBBOOT_ERROR_ANDROID_ZERO_KERNEL, "kernel size is 0");
-    libboot_internal_register_error(LIBBOOT_ERROR_GROUP_ANDROID, LIBBOOT_ERROR_ANDROID_READ_KERNEL, "can't read kernel: "LIBBOOT_FMT_INT);
-    libboot_internal_register_error(LIBBOOT_ERROR_GROUP_ANDROID, LIBBOOT_ERROR_ANDROID_READ_RAMDISK, "can't read ramdisk: "LIBBOOT_FMT_INT);
-    libboot_internal_register_error(LIBBOOT_ERROR_GROUP_ANDROID, LIBBOOT_ERROR_ANDROID_READ_TAGS, "can't read tags: "LIBBOOT_FMT_INT);
+    libboot_internal_register_error(LIBBOOT_ERROR_GROUP_ANDROID, LIBBOOT_ERROR_ANDROID_READ_KERNEL, "can't read kernel: %"LIBBOOT_FMT_INT);
+    libboot_internal_register_error(LIBBOOT_ERROR_GROUP_ANDROID, LIBBOOT_ERROR_ANDROID_READ_RAMDISK, "can't read ramdisk: %"LIBBOOT_FMT_INT);
+    libboot_internal_register_error(LIBBOOT_ERROR_GROUP_ANDROID, LIBBOOT_ERROR_ANDROID_READ_TAGS, "can't read tags: %"LIBBOOT_FMT_INT);
     libboot_internal_register_error(LIBBOOT_ERROR_GROUP_ANDROID, LIBBOOT_ERROR_ANDROID_ALLOC_CMDLINE, "can't allocate cmdline");
     libboot_internal_register_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_OUT_OF_MEMORY, "can't allocate memory");
 
@@ -413,7 +413,7 @@ void libboot_uninit(void)
     while (!libboot_list_is_empty(&allocations)) {
         allocation_t *alloc = libboot_list_remove_tail_type(&allocations, allocation_t, node);
 
-        LOGE("MEMLEAK: 0x%08lx-0x%08lx size=0x%08lx refs=%lu\n", alloc->addr, alloc->addr+alloc->size, alloc->size, alloc->refs);
+        LOGE("MEMLEAK: 0x%08"LIBBOOT_FMT_ADDR"-0x%08"LIBBOOT_FMT_ADDR" size=0x%08"LIBBOOT_FMT_ADDR" refs=%"LIBBOOT_FMT_UINTN"\n", alloc->addr, alloc->addr+alloc->size, alloc->size, alloc->refs);
         alloc->refs = 1;
         libboot_free((void *)alloc->addr);
     }
