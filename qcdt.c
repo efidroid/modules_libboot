@@ -191,7 +191,7 @@ static int libboot_qcdt_add_compatible_entries(void *dtb, boot_uint32_t dtb_size
                  cur_dt_entry->platform_id, cur_dt_entry->variant_id, cur_dt_entry->soc_rev);
 
             if (devtree_entry_is_excact_match(cur_dt_entry, dtb_list)) {
-                LOGV("Device tree exact match the board: <%u %u 0x%x> != <%u %u 0x%x>\n",
+                LOGV("Device tree exact match the board: <%u %u 0x%x> == <%u %u 0x%x>\n",
                      cur_dt_entry->platform_id,
                      cur_dt_entry->variant_id,
                      cur_dt_entry->soc_rev,
@@ -207,10 +207,10 @@ static int libboot_qcdt_add_compatible_entries(void *dtb, boot_uint32_t dtb_size
                      libboot_qcdt_platform_id(),
                      libboot_qcdt_hardware_id(),
                      libboot_qcdt_soc_version());
-                plat_prop += DT_ENTRY_V1_SIZE;
-                len_plat_id -= DT_ENTRY_V1_SIZE;
-                continue;
             }
+
+            plat_prop += DT_ENTRY_V1_SIZE;
+            len_plat_id -= DT_ENTRY_V1_SIZE;
         }
         libboot_free(cur_dt_entry);
 
