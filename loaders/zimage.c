@@ -37,8 +37,14 @@ static int ldrmodule_load(bootimg_context_t* context, boot_uintn_t type, boot_ui
     libboot_platform_memmove(&zimage_end,   data8 + 0x2C, sizeof(zimage_end));
     zimage_size = zimage_end - zimage_start;
 
-    // TODO: find appended fdt
-    
+    // get appended fdt
+    if(zimage_size<context->kernel_size) {
+        void* fdt = libboot_refalloc(context->kernel_data + zimage_size, context->kernel_size - zimage_size);
+        if(!fdt) return -1;
+
+        libboot_free(context->tags_data);
+        context->tags_data = fdt;
+    }
 
     // we'll need tags to boot
     context->kernel_is_linux = 1;
