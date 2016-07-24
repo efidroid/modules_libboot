@@ -106,7 +106,7 @@ void *libboot_alloc(boot_uintn_t size)
     libboot_list_add_tail(&allocations, &alloc->node);
 
 #if DEBUG_ALLOCATIONS
-    LOGI("ALLOC=%p size=%lu refs=%lu\n", (void *)alloc->addr, alloc->size, alloc->refs);
+    LOGI("ALLOC=0x%08lx size=%lu refs=%lu\n", alloc->addr, alloc->size, alloc->refs);
 #endif
 
     return mem;
@@ -126,7 +126,7 @@ void *libboot_refalloc(void *ptr, boot_uintn_t size)
 
             alloc->refs++;
 #if DEBUG_ALLOCATIONS
-            LOGI("REFALLOC=%p size=%lu refs=%lu\n", (void *)alloc->addr, alloc->size, alloc->refs);
+            LOGI("REFALLOC=0x%08lx size=%lu refs=%lu\n", alloc->addr, alloc->size, alloc->refs);
 #endif
             return ptr;
         }
@@ -162,7 +162,7 @@ void libboot_free(void *ptr)
 
             if (alloc->refs<=0) {
 #if DEBUG_ALLOCATIONS
-                LOGI("FREE=%p size=%lu refs=%lu\n", (void *)alloc->addr, alloc->size, alloc->refs);
+                LOGI("FREE=0x%08lx size=%lu refs=%lu\n", alloc->addr, alloc->size, alloc->refs);
 #endif
 
                 libboot_platform_free((void *)alloc->addr);
@@ -172,7 +172,7 @@ void libboot_free(void *ptr)
 
             else {
 #if DEBUG_ALLOCATIONS
-                LOGI("DEREF=%p size=%lu refs=%lu\n", (void *)alloc->addr, alloc->size, alloc->refs);
+                LOGI("DEREF=0x%08lx size=%lu refs=%lu\n", alloc->addr, alloc->size, alloc->refs);
 #endif
             }
             return;
