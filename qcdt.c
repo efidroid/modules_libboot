@@ -83,7 +83,7 @@ static void free_dt_entry_queue(dt_entry_node_t *dt_entry_queue)
     libboot_free(dt_entry_queue);
 }
 
-int libboot_qcdt_add_compatible_entries(void *dtb, boot_uint32_t dtb_size, dt_entry_node_t *dtb_list)
+static int libboot_qcdt_add_compatible_entries(void *dtb, boot_uint32_t dtb_size, dt_entry_node_t *dtb_list)
 {
     int root_offset;
     const void *prop = NULL;
@@ -385,7 +385,6 @@ int libboot_qcdt_add_compatible_entries(void *dtb, boot_uint32_t dtb_size, dt_en
     return 1;
 }
 
-#if 0
 /*
  * Will relocate the DTB to the tags addr if the device tree is found and return
  * its address
@@ -397,17 +396,13 @@ int libboot_qcdt_add_compatible_entries(void *dtb, boot_uint32_t dtb_size, dt_en
  * Return Value: DTB address : If appended device tree is found
  *               'NULL'         : Otherwise
  */
-void *libboot_qcdt_appended(void *kernel, boot_uint32_t kernel_size, boot_uint32_t dtb_offset, void *tags)
+void *libboot_qcdt_appended(void *fdt, boot_uintn_t fdt_size)
 {
-    void *kernel_end = kernel + kernel_size;
-    boot_uint32_t app_dtb_offset = 0;
+    void *fdt_end = fdt + fdt_size;
     void *dtb = NULL;
     void *bestmatch_tag = NULL;
     dt_entry_t *best_match_dt_entry = NULL;
-    boot_uint32_t bestmatch_tag_size;
     dt_entry_node_t *dt_entry_queue = NULL;
-    dt_entry_node_t *dt_node_tmp1 = NULL;
-    dt_entry_node_t *dt_node_tmp2 = NULL;
 
 
     /* Initialize the dtb entry node*/
@@ -420,34 +415,21 @@ void *libboot_qcdt_appended(void *kernel, boot_uint32_t kernel_size, boot_uint32
     }
     libboot_list_initialize(&dt_entry_queue->node);
 
-    if (dtb_offset)
-        app_dtb_offset = dtb_offset;
-    else
-        libboot_platform_memmove((void *) &app_dtb_offset, (void *) (kernel + DTB_OFFSET), sizeof(boot_uint32_t));
-
-    if (((uintptr_t)kernel + (uintptr_t)app_dtb_offset) < (uintptr_t)kernel) {
-        return NULL;
-    }
-    dtb = kernel + app_dtb_offset;
-    while (((uintptr_t)dtb + sizeof(fdt_header_t)) < (uintptr_t)kernel_end) {
-        fdt_header_t dtb_hdr;
+    dtb = fdt;
+    while (((uintptr_t)dtb + sizeof(struct fdt_header)) < (uintptr_t)fdt_end) {
+        struct fdt_header dtb_hdr;
         boot_uint32_t dtb_size;
 
         /* the DTB could be unaligned, so extract the header,
          * and operate on it separately */
-        libboot_platform_memmove(&dtb_hdr, dtb, sizeof(fdt_header_t));
+        libboot_platform_memmove(&dtb_hdr, dtb, sizeof(struct fdt_header));
         if (fdt_check_header((const void *)&dtb_hdr) != 0 ||
                 ((uintptr_t)dtb + (uintptr_t)fdt_totalsize((const void *)&dtb_hdr) < (uintptr_t)dtb) ||
-                ((uintptr_t)dtb + (uintptr_t)fdt_totalsize((const void *)&dtb_hdr) > (uintptr_t)kernel_end))
+                ((uintptr_t)dtb + (uintptr_t)fdt_totalsize((const void *)&dtb_hdr) > (uintptr_t)fdt_end))
             break;
         dtb_size = fdt_totalsize(&dtb_hdr);
 
-        if (check_aboot_addr_range_overlap((boot_uint32_t)tags, dtb_size)) {
-            LOGE("Tags addresses overlap with aboot addresses.\n");
-            return NULL;
-        }
-
-        devtree_add_compatible_entries(dtb, dtb_size, dt_entry_queue);
+        libboot_qcdt_add_compatible_entries(dtb, dtb_size, dt_entry_queue);
 
         /* goto the next device tree if any */
         dtb += dtb_size;
@@ -456,7 +438,6 @@ void *libboot_qcdt_appended(void *kernel, boot_uint32_t kernel_size, boot_uint32
     best_match_dt_entry = devtree_get_best_entry(dt_entry_queue);
     if (best_match_dt_entry) {
         bestmatch_tag = (void *)best_match_dt_entry->offset;
-        bestmatch_tag_size = best_match_dt_entry->size;
         LOGI("Best match DTB tags %u/%08x/0x%08x/%x/%x/%x/%x/%x/%x/%x\n",
              best_match_dt_entry->platform_id, best_match_dt_entry->variant_id,
              best_match_dt_entry->board_hw_subtype, best_match_dt_entry->soc_rev,
@@ -469,21 +450,14 @@ void *libboot_qcdt_appended(void *kernel, boot_uint32_t kernel_size, boot_uint32
              libboot_qcdt_pmic_target(0), libboot_qcdt_pmic_target(1),
              libboot_qcdt_pmic_target(2), libboot_qcdt_pmic_target(3));
     }
+
     /* libboot_free queue's memory */
-    libboot_list_for_every_entry(&dt_entry_queue->node, dt_node_tmp1, dt_entry_node_t, node) {
-        dt_node_tmp2 = (dt_entry_node_t *) dt_node_tmp1->node.prev;
-        dt_entry_list_delete(dt_node_tmp1);
-        dt_node_tmp1 = dt_node_tmp2;
-    }
+    free_dt_entry_queue(dt_entry_queue);
 
     if (bestmatch_tag) {
-        libboot_platform_memmove(tags, bestmatch_tag, bestmatch_tag_size);
-        /* clear out the old DTB magic so kernel doesn't find it */
-        *((boot_uint32_t *)(kernel + app_dtb_offset)) = 0;
-        return tags;
+        return bestmatch_tag;
     }
 
-    LOGE("DTB offset is incorrect, kernel image does not have appended DTB\n");
     LOGE("No DTB found for the board: <%u %u 0x%x>, 0x%0x/0x%x/0x%x/0x%0x\n",
          libboot_qcdt_platform_id(),
          libboot_qcdt_hardware_id(),
@@ -493,7 +467,6 @@ void *libboot_qcdt_appended(void *kernel, boot_uint32_t kernel_size, boot_uint32
 
     return NULL;
 }
-#endif
 
 /* Returns 0 if the device tree is valid. */
 int libboot_qcdt_validate(dt_table_t *table, boot_uint32_t *dt_hdr_size)

@@ -136,7 +136,5 @@ typedef struct {
 
 int libboot_qcdt_validate(dt_table_t *table, boot_uint32_t *dt_hdr_size);
 int libboot_qcdt_get_entry_info(dt_table_t *table, dt_entry_t *dt_entry_info);
-//int update_device_tree(void *fdt, const char *, void *, unsigned);
-//int libboot_qcdt_add_mem_info(void *fdt, boot_uint32_t offset, uint64_t size, uint64_t addr);
-//void *libboot_qcdt_appended(void *kernel, boot_uint32_t kernel_size, boot_uint32_t dtb_offset, void *tags);
+void *libboot_qcdt_appended(void *fdt, boot_uintn_t fdt_size);
 #endif // LIB_BOOT_INTERNAL_QCDT_H

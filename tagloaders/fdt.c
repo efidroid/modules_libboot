@@ -16,6 +16,7 @@
 
 #include <lib/boot.h>
 #include <lib/boot/internal/boot_internal.h>
+#include <lib/boot/internal/qcdt.h>
 #include <libfdt.h>
 
 #define DTB_PAD_SIZE 1024
@@ -153,6 +154,48 @@ static int fdtloader_add_meminfo(void *fdt)
     return 0;
 }
 
+static boot_uintn_t fdtloader_fdt_count(void *fdt, boot_uintn_t size)
+{
+    boot_uintn_t i = 0;
+    while (fdt+sizeof(struct fdt_header) < fdt+size) {
+        if (fdt_check_header(fdt)) break;
+        boot_uintn_t fdtsize = fdt_totalsize(fdt);
+
+        // next
+        fdt += fdtsize;
+    }
+
+    return i;
+}
+
+int fdtloader_process_multifdt(bootimg_context_t *context)
+{
+    int rc;
+
+    // get pointer to compatible fdt
+    void *fdt = libboot_qcdt_appended(context->tags_data, context->tags_size);
+    if (!fdt) return -1;
+
+    // check fdt header
+    rc = fdt_check_header(fdt);
+    if (rc) return -1;
+
+    // get size
+    boot_intn_t fdt_size = fdt_totalsize(fdt);
+    if (fdt_size<=0) return -1;
+
+    // refalloc fdt
+    void *tags_data = libboot_refalloc(fdt, fdt_size);
+    if (!tags_data) return -1;
+
+    // replace tags
+    libboot_free(context->tags_data);
+    context->tags_data = tags_data;
+    context->tags_size = fdt_size;
+
+    return 0;
+}
+
 static int tagmodule_patch(bootimg_context_t *context)
 {
     int rc;
@@ -167,6 +210,12 @@ static int tagmodule_patch(bootimg_context_t *context)
         context->tags_data = context->default_fdt;
         context->tags_size = fdt_totalsize(context->tags_data);
         context->tags_type = LIBBOOT_TAGS_TYPE_FDT;
+    }
+
+    // process multi fdt in case this is one
+    if (fdtloader_fdt_count(context->tags_data, context->tags_size)>1) {
+        rc = fdtloader_process_multifdt(context);
+        if (rc) goto out;
     }
 
     // check fdt header
