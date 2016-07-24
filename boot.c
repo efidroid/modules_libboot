@@ -460,6 +460,29 @@ int libboot_load(bootimg_context_t* context) {
     return libboot_load_partial(context, LIBBOOT_LOAD_TYPE_ALL, 1);
 }
 
+int libboot_unload(bootimg_context_t* context) {
+    if(!context) return -1;
+
+    // destroy kernel IO
+    libboot_internal_io_destroy(context->io);
+    context->io = NULL;
+
+    // refalloc rootio
+    if(context->rootio) {
+        boot_io_t* rootio = libboot_refalloc(context->rootio, 0);
+        if(!rootio) return -1;
+        context->io = rootio;
+    }
+
+    // delete data
+    libboot_free(context->kernel_data);
+    libboot_free(context->ramdisk_data);
+    libboot_free(context->tags_data);
+    libboot_cmdline_free(&context->cmdline);
+
+    return 0;
+}
+
 static int libboot_identify_tags(bootimg_context_t* context) {
     libboot_tags_type_t type = LIBBOOT_TAGS_TYPE_UNKNOWN;
 

@@ -159,6 +159,7 @@ int libboot_identify(boot_io_t* io, bootimg_context_t* context);
 int libboot_identify_memory(void* mem, boot_uintn_t sz, bootimg_context_t* context);
 int libboot_load(bootimg_context_t* context);
 int libboot_load_partial(bootimg_context_t* context, boot_uintn_t type, boot_uint8_t recursive);
+int libboot_unload(bootimg_context_t* context);
 int libboot_prepare(bootimg_context_t* context);
 
 // cmdline
