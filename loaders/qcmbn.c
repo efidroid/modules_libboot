@@ -69,12 +69,21 @@ static int ldrmodule_load(bootimg_context_t* context, boot_uintn_t type, boot_ui
 
     // load kernel
     boot_uintn_t kernel_size = hdr->code_size;
-    kernel_data = libboot_internal_io_alloc(context->io, kernel_size);
-    if(!kernel_data) goto out;
-    rc = libboot_internal_io_read(context->io, kernel_data, sizeof(*hdr) + hdr->image_src, kernel_size, &kernel_data);
-    if(rc<0) {
-        //libboot_format_error(LIBBOOT_ERROR_GROUP_ANDROID, LIBBOOT_ERROR_ANDROID_READ_KERNEL, rc);
-        goto err_free;
+    boot_uintn_t kernel_offset = sizeof(*hdr) + hdr->image_src;
+    // refalloc
+    if(context->io->is_memio && context->io->pdata_is_allocated) {
+        kernel_data = libboot_refalloc(context->io->pdata + kernel_offset, kernel_size);
+        if(!kernel_data) goto out;
+    }
+    // read from IO
+    else {
+        kernel_data = libboot_internal_io_alloc(context->io, kernel_size);
+        if(!kernel_data) goto out;
+        rc = libboot_internal_io_read(context->io, kernel_data, kernel_offset, kernel_size, &kernel_data);
+        if(rc<0) {
+            //libboot_format_error(LIBBOOT_ERROR_GROUP_ANDROID, LIBBOOT_ERROR_ANDROID_READ_KERNEL, rc);
+            goto err_free;
+        }
     }
 
     // replace kernel data
