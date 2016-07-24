@@ -152,14 +152,14 @@ out:
     return ret;
 }
 
-static boot_uint32_t ldrmodule_checksum(bootimg_context_t* context) {
+static boot_uint32_t ldrmodule_checksum(boot_io_t* io) {
     int rc;
     boot_uint32_t ret = 0;
 
-    boot_img_hdr* hdr = libboot_internal_io_alloc(context->io, sizeof(boot_img_hdr));
+    boot_img_hdr* hdr = libboot_internal_io_alloc(io, sizeof(boot_img_hdr));
     if(!hdr) goto out;
 
-    rc = libboot_internal_io_read(context->io, hdr, 0, sizeof(*hdr), (void**)&hdr);
+    rc = libboot_internal_io_read(io, hdr, 0, sizeof(*hdr), (void**)&hdr);
     if(rc<0) goto out;
 
     // calculate checksum

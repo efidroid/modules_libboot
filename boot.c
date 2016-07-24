@@ -32,6 +32,7 @@ typedef struct {
 
     boot_uintn_t addr;
     boot_uintn_t size;
+    boot_uintn_t refs;
 } allocation_t;
 
 boot_uintn_t libboot_internal_strlcpy(char *dst, const char *src, boot_uintn_t size) {
@@ -81,7 +82,55 @@ void libboot_internal_tagmodule_register(tagmodule_t* mod) {
 }
 
 void* libboot_alloc(boot_uintn_t size) {
-    return libboot_platform_alloc(size);
+    void* mem = libboot_platform_alloc(size);
+    if(!mem) return NULL;
+
+    allocation_t* alloc = libboot_platform_alloc(sizeof(allocation_t));
+    if(!alloc) {
+        libboot_free(mem);
+        return NULL;
+    }
+
+    alloc->addr = (boot_uintn_t)mem;
+    alloc->size = size;
+    alloc->refs = 1;
+
+    libboot_list_add_tail(&allocations, &alloc->node);
+
+    return mem;
+}
+
+void* libboot_refalloc(void* ptr, boot_uintn_t size) {
+    if(!ptr) return NULL;
+
+    boot_uintn_t addr = (boot_uintn_t) ptr;
+    allocation_t *alloc;
+    libboot_list_for_every_entry(&allocations, alloc, allocation_t, node) {
+        if(addr>=alloc->addr && addr<alloc->addr+alloc->size) {
+            // the size exceeds the range
+            if(addr+size>alloc->addr+alloc->size)
+                return NULL;
+
+            alloc->refs++;
+            return ptr;
+        }
+    }
+
+    return NULL;
+}
+
+boot_uintn_t libboot_get_refcount(void* ptr) {
+    if(!ptr) return 0;
+
+    boot_uintn_t addr = (boot_uintn_t) ptr;
+    allocation_t *alloc;
+    libboot_list_for_every_entry(&allocations, alloc, allocation_t, node) {
+        if(addr>=alloc->addr && addr<alloc->addr+alloc->size) {
+            return alloc->refs;
+        }
+    }
+
+    return 0;
 }
 
 void libboot_free(void *ptr) {
@@ -91,33 +140,21 @@ void libboot_free(void *ptr) {
     allocation_t *alloc;
     libboot_list_for_every_entry(&allocations, alloc, allocation_t, node) {
         if(addr>=alloc->addr && addr<alloc->addr+alloc->size) {
-            libboot_platform_free((void*)alloc->addr);
-            libboot_list_delete(&alloc->node);
-            libboot_platform_free(alloc);
+            alloc->refs--;
+
+            if(alloc->refs<=0) {
+                libboot_platform_free((void*)alloc->addr);
+                libboot_list_delete(&alloc->node);
+                libboot_platform_free(alloc);
+            }
             return;
         }
     }
-
-    return libboot_platform_free(ptr);
 }
 
 void* libboot_internal_io_alloc(boot_io_t* io, boot_uintn_t sz) {
     boot_uintn_t allocsz = io->blksz + IO_ALIGN(io, sz);
-    void* mem = libboot_alloc(allocsz);
-    if(!mem) return NULL;
-
-    allocation_t* alloc = libboot_alloc(sizeof(allocation_t));
-    if(!alloc) {
-        libboot_free(mem);
-        return NULL;
-    }
-
-    alloc->addr = (boot_uintn_t)mem;
-    alloc->size = allocsz;
-
-    libboot_list_add_tail(&allocations, &alloc->node);
-
-    return mem;
+    return libboot_alloc(allocsz);
 }
 
 boot_intn_t libboot_internal_io_read(boot_io_t* io, void* buf, boot_uintn_t off, boot_uintn_t sz, void** bufoff) {
@@ -134,8 +171,11 @@ boot_intn_t libboot_internal_io_read(boot_io_t* io, void* buf, boot_uintn_t off,
 void libboot_internal_io_destroy(boot_io_t* io) {
     if(!io) return;
 
-    if(io->pdata_is_allocated)
-        libboot_free(io->pdata);
+    // only delete the actual data if there's just one ref left
+    if(libboot_get_refcount(io)<=1) {
+        if(io->pdata_is_allocated)
+            libboot_free(io->pdata);
+    }
 
     libboot_free(io);
 }
@@ -169,12 +209,22 @@ int libboot_identify(boot_io_t* io, bootimg_context_t* context) {
 
         // we have a match
         if(type!=BOOTIMG_TYPE_UNKNOWN) {
-            libboot_internal_io_destroy(context->io);
-            context->type = type;
-            context->io = io;
+            // this is is initial check
+            if(!context->rootio) {
+                boot_io_t* rootio = libboot_refalloc(io, 0);
+                if(!rootio) return -1;
+                context->rootio = rootio;
+                context->outer_type = type;
 
-            if(mod->checksum && context->outer_type==BOOTIMG_TYPE_UNKNOWN)
-                context->checksum = mod->checksum(context);
+                // generate a checksum
+                if(mod->checksum)
+                    context->checksum = mod->checksum(io);
+            }
+
+            // replace current kernel-IO
+            libboot_internal_io_destroy(context->io);
+            context->io = io;
+            context->type = type;
 
             rc = 0;
             break;
@@ -183,22 +233,18 @@ int libboot_identify(boot_io_t* io, bootimg_context_t* context) {
 
     // no match
     if(type==BOOTIMG_TYPE_UNKNOWN) {
-        libboot_internal_io_destroy(context->io);
-
         // this is the first scan and we don't have a match!
-        if(context->outer_type==BOOTIMG_TYPE_UNKNOWN) {
+        if(!context->rootio) {
             rc = -1;
         }
+
+        // assume raw image
         else {
-            context->type = BOOTIMG_TYPE_RAW;
+            libboot_internal_io_destroy(context->io);
             context->io = io;
+            context->type = BOOTIMG_TYPE_RAW;
             rc = 0;
         }
-    }
-
-    // set outer type on first scan
-    if(rc==0 && context->outer_type==BOOTIMG_TYPE_UNKNOWN) {
-        context->outer_type = context->type;
     }
 
     return rc;
@@ -223,10 +269,11 @@ int libboot_identify_memory(void* mem, boot_uintn_t sz, bootimg_context_t* conte
     io->numblocks = sz;
     io->pdata = mem;
     io->pdata_is_allocated = 0;
+    io->is_memio = 1;
 
     int rc = libboot_identify(io, context);
     if(rc) {
-        libboot_free(io);
+        libboot_internal_io_destroy(io);
     }
 
     return rc;
@@ -239,7 +286,6 @@ void libboot_internal_register_error(libboot_error_group_t group, libboot_error_
     format->group = group;
     format->type = type;
     format->fmt = fmt;
-
     libboot_list_add_tail(&error_formats, &format->node);
 }
 
@@ -284,6 +330,8 @@ void libboot_error_stack_reset(void) {
 }
 
 int libboot_init(void) {
+    libboot_list_initialize(&allocations);
+
     // loader modules
     libboot_list_initialize(&ldrmodules);
     libboot_internal_ldrmodule_android_init();
@@ -309,8 +357,6 @@ int libboot_init(void) {
     libboot_internal_register_error(LIBBOOT_ERROR_GROUP_ANDROID, LIBBOOT_ERROR_ANDROID_ALLOC_CMDLINE, "can't allocate cmdline");
     libboot_internal_register_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_OUT_OF_MEMORY, "can't allocate memory");
 
-    libboot_list_initialize(&allocations);
-
     return 0;
 }
 
@@ -326,7 +372,8 @@ void libboot_init_context(bootimg_context_t* context) {
 void libboot_free_context(bootimg_context_t* context) {
     if(!context) return;
 
-    libboot_free(context->io);
+    libboot_internal_io_destroy(context->io);
+    libboot_internal_io_destroy(context->rootio);
     libboot_free(context->kernel_data);
     libboot_free(context->ramdisk_data);
     libboot_free(context->tags_data);

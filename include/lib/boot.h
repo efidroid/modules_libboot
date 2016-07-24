@@ -44,6 +44,9 @@ struct boot_io {
 
     void* pdata;
     boot_uint8_t pdata_is_allocated;
+
+    // memio
+    boot_uint8_t is_memio;
 };
 typedef struct boot_io boot_io_t;
 
@@ -108,6 +111,7 @@ struct bootimg_context {
     // identify
     bootimg_type_t type;
     bootimg_type_t outer_type;
+    boot_io_t* rootio;
     boot_io_t* io;
     boot_uint32_t checksum;
 
@@ -142,6 +146,8 @@ typedef struct bootimg_context bootimg_context_t;
 
 // memory allocations
 void* libboot_alloc(boot_uintn_t size);
+void* libboot_refalloc(void* ptr, boot_uintn_t size);
+boot_uintn_t libboot_get_refcount(void* ptr);
 void  libboot_free(void *ptr);
 
 // basic loading

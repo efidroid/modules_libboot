@@ -99,16 +99,16 @@ out:
     return ret;
 }
 
-static boot_uint32_t ldrmodule_checksum(bootimg_context_t* context) {
+static boot_uint32_t ldrmodule_checksum(boot_io_t* io) {
     int rc;
     boot_uint32_t ret = 0;
 
     // allocate header
-    qcom_bootimg_t* hdr = libboot_internal_io_alloc(context->io, sizeof(qcom_bootimg_t));
+    qcom_bootimg_t* hdr = libboot_internal_io_alloc(io, sizeof(qcom_bootimg_t));
     if(!hdr) goto out;
 
     // read header
-    rc = libboot_internal_io_read(context->io, hdr, 0, sizeof(*hdr), (void**)&hdr);
+    rc = libboot_internal_io_read(io, hdr, 0, sizeof(*hdr), (void**)&hdr);
     if(rc<0) goto out;
 
     // calculate checksum
