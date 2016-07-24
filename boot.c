@@ -18,6 +18,7 @@
 #include <lib/boot/internal/boot_internal.h>
 
 #define LIBOOT_INTERNAL_ERROR_STACK_SIZE 64
+#define DEBUG_ALLOCATIONS 0
 
 static libboot_list_node_t ldrmodules;
 static libboot_list_node_t tagmodules;
@@ -97,6 +98,10 @@ void* libboot_alloc(boot_uintn_t size) {
 
     libboot_list_add_tail(&allocations, &alloc->node);
 
+#if DEBUG_ALLOCATIONS
+    LOGI("ALLOC=%p size=%lu refs=%lu\n", (void*)alloc->addr, alloc->size, alloc->refs);
+#endif
+
     return mem;
 }
 
@@ -112,6 +117,9 @@ void* libboot_refalloc(void* ptr, boot_uintn_t size) {
                 return NULL;
 
             alloc->refs++;
+#if DEBUG_ALLOCATIONS
+            LOGI("REFALLOC=%p size=%lu refs=%lu\n", (void*)alloc->addr, alloc->size, alloc->refs);
+#endif
             return ptr;
         }
     }
@@ -143,9 +151,19 @@ void libboot_free(void *ptr) {
             alloc->refs--;
 
             if(alloc->refs<=0) {
+#if DEBUG_ALLOCATIONS
+                LOGI("FREE=%p size=%lu refs=%lu\n", (void*)alloc->addr, alloc->size, alloc->refs);
+#endif
+
                 libboot_platform_free((void*)alloc->addr);
                 libboot_list_delete(&alloc->node);
                 libboot_platform_free(alloc);
+            }
+
+            else {
+#if DEBUG_ALLOCATIONS
+                LOGI("DEREF=%p size=%lu refs=%lu\n", (void*)alloc->addr, alloc->size, alloc->refs);
+#endif
             }
             return;
         }
