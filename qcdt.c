@@ -69,6 +69,20 @@ static void dt_entry_list_delete(dt_entry_node_t *dt_node_member)
     }
 }
 
+static void free_dt_entry_queue(dt_entry_node_t *dt_entry_queue)
+{
+    dt_entry_node_t *dt_node_tmp1 = NULL;
+    dt_entry_node_t *dt_node_tmp2 = NULL;
+
+    libboot_list_for_every_entry(&dt_entry_queue->node, dt_node_tmp1, dt_entry_node_t, node) {
+        /* libboot_free node memory */
+        dt_node_tmp2 = (dt_entry_node_t *) dt_node_tmp1->node.prev;
+        dt_entry_list_delete(dt_node_tmp1);
+        dt_node_tmp1 = dt_node_tmp2;
+    }
+    libboot_free(dt_entry_queue);
+}
+
 int libboot_qcdt_add_compatible_entries(void *dtb, boot_uint32_t dtb_size, dt_entry_node_t *dtb_list)
 {
     int root_offset;
@@ -886,8 +900,6 @@ int libboot_qcdt_get_entry_info(dt_table_t *table, dt_entry_t *dt_entry_info)
     dt_entry_v1_t *dt_entry_v1 = NULL;
     dt_entry_v2_t *dt_entry_v2 = NULL;
     dt_entry_node_t *dt_entry_queue = NULL;
-    dt_entry_node_t *dt_node_tmp1 = NULL;
-    dt_entry_node_t *dt_node_tmp2 = NULL;
     boot_uint32_t found = 0;
 
     if (!dt_entry_info) {
@@ -973,7 +985,7 @@ int libboot_qcdt_get_entry_info(dt_table_t *table, dt_entry_t *dt_entry_info)
             default:
                 LOGE("ERROR: Unsupported version (%d) in DT table \n",
                      table->version);
-                libboot_free(dt_entry_queue);
+                free_dt_entry_queue(dt_entry_queue);
                 return -1;
         }
 
@@ -1007,6 +1019,7 @@ int libboot_qcdt_get_entry_info(dt_table_t *table, dt_entry_t *dt_entry_info)
                  libboot_qcdt_pmic_target(0), libboot_qcdt_pmic_target(1),
                  libboot_qcdt_pmic_target(2), libboot_qcdt_pmic_target(3));
         }
+        free_dt_entry_queue(dt_entry_queue);
         return 0;
     }
 
@@ -1014,12 +1027,6 @@ int libboot_qcdt_get_entry_info(dt_table_t *table, dt_entry_t *dt_entry_info)
          libboot_qcdt_platform_id(), libboot_qcdt_soc_version(),
          libboot_qcdt_target_id(), libboot_qcdt_hardware_subtype());
 
-    libboot_list_for_every_entry(&dt_entry_queue->node, dt_node_tmp1, dt_entry_node_t, node) {
-        /* libboot_free node memory */
-        dt_node_tmp2 = (dt_entry_node_t *) dt_node_tmp1->node.prev;
-        dt_entry_list_delete(dt_node_tmp1);
-        dt_node_tmp1 = dt_node_tmp2;
-    }
-    libboot_free(dt_entry_queue);
+    free_dt_entry_queue(dt_entry_queue);
     return -1;
 }
