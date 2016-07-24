@@ -69,6 +69,8 @@ int libboot_internal_load_rawdata_to_kernel(bootimg_context_t* context) {
     }
     rc = 0;
 
+    // replace kernel data
+    libboot_free(context->kernel_data);
     context->kernel_data = data;
 
     return rc;
