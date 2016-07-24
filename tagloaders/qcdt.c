@@ -20,12 +20,13 @@
 
 #define DEV_TREE_MAGIC          0x54444351 /* "QCDT" */
 
-static int tagmodule_patch(bootimg_context_t* context) {
-    dt_table_t* table = (dt_table_t*) context->tags_data;
+static int tagmodule_patch(bootimg_context_t *context)
+{
+    dt_table_t *table = (dt_table_t *) context->tags_data;
     boot_uint32_t dt_hdr_size;
 
     // try default qcdt
-    if(!table) {
+    if (!table) {
         table = context->default_qcdt;
     }
 
@@ -36,25 +37,25 @@ static int tagmodule_patch(bootimg_context_t* context) {
 
     // get compatible dt entry offset
     dt_entry_t dt_entry;
-    if(libboot_qcdt_get_entry_info(table, &dt_entry) != 0){
+    if (libboot_qcdt_get_entry_info(table, &dt_entry) != 0) {
         return -1;
     }
 
     // refalloc
-    void* fdt;
-    if(table!=context->default_qcdt) {
-        fdt = libboot_refalloc((boot_uint8_t*)(table) + dt_entry.offset, dt_entry.size);
-        if(!fdt) return -1;
+    void *fdt;
+    if (table!=context->default_qcdt) {
+        fdt = libboot_refalloc((boot_uint8_t *)(table) + dt_entry.offset, dt_entry.size);
+        if (!fdt) return -1;
     }
 
     // make a copy
     else {
         // allocate data
         fdt = libboot_alloc(dt_entry.size);
-        if(!fdt) return -1;
+        if (!fdt) return -1;
 
         // copy fdt
-        libboot_platform_memmove(fdt, (boot_uint8_t*)(table) + dt_entry.offset, dt_entry.size);
+        libboot_platform_memmove(fdt, (boot_uint8_t *)(table) + dt_entry.offset, dt_entry.size);
     }
 
     // replace tags
@@ -77,7 +78,8 @@ static tagmodule_t tagmodule = {
     .patch = tagmodule_patch,
 };
 
-int libboot_internal_tagmodule_qcdt_init(void) {
+int libboot_internal_tagmodule_qcdt_init(void)
+{
     libboot_internal_tagmodule_register(&tagmodule);
     return 0;
 }

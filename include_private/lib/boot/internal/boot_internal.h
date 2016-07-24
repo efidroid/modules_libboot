@@ -34,9 +34,9 @@
 #define IO_ALIGN(io, sz) ALIGN(sz, (io)->blksz)
 
 // LOADERS
-typedef int (*ldrmodule_magictest_t)(boot_io_t* io);
-typedef int (*ldrmodule_load_t)(bootimg_context_t* context, boot_uintn_t type, boot_uint8_t recursive);
-typedef boot_uint32_t (*ldrmodule_checksum_t)(boot_io_t* io);
+typedef int (*ldrmodule_magictest_t)(boot_io_t *io);
+typedef int (*ldrmodule_load_t)(bootimg_context_t *context, boot_uintn_t type, boot_uint8_t recursive);
+typedef boot_uint32_t (*ldrmodule_checksum_t)(boot_io_t *io);
 
 typedef struct {
     libboot_list_node_t node;
@@ -48,7 +48,7 @@ typedef struct {
     ldrmodule_magictest_t magic_custom_test;
     boot_uintn_t magic_off;
     boot_uintn_t magic_sz;
-    const void* magic_val;
+    const void *magic_val;
 
     // checksum
     ldrmodule_checksum_t checksum;
@@ -62,12 +62,12 @@ typedef struct {
 
     libboot_error_group_t group;
     libboot_error_type_t type;
-    const char* fmt;
+    const char *fmt;
 } libboot_error_format_t;
 
 // tag modules
-typedef int (*tagmodule_magictest_t)(bootimg_context_t* context);
-typedef int (*tagmodule_patch_t)(bootimg_context_t* context);
+typedef int (*tagmodule_magictest_t)(bootimg_context_t *context);
+typedef int (*tagmodule_patch_t)(bootimg_context_t *context);
 
 typedef struct {
     libboot_list_node_t node;
@@ -79,7 +79,7 @@ typedef struct {
     tagmodule_magictest_t magic_custom_test;
     boot_uintn_t magic_off;
     boot_uintn_t magic_sz;
-    const void* magic_val;
+    const void *magic_val;
 
     // patch
     tagmodule_patch_t patch;
@@ -87,8 +87,8 @@ typedef struct {
 
 // error handling
 
-libboot_error_format_t* libboot_internal_get_error_format(libboot_error_group_t group, libboot_error_type_t type);
-char* libboot_internal_error_stack_alloc(void);
+libboot_error_format_t *libboot_internal_get_error_format(libboot_error_group_t group, libboot_error_type_t type);
+char *libboot_internal_error_stack_alloc(void);
 
 #define libboot_format_error(group, type, ...) do {\
     char* buf = libboot_internal_error_stack_alloc();\
@@ -97,21 +97,21 @@ char* libboot_internal_error_stack_alloc(void);
     if(format) libboot_platform_format_string(buf, 4096, format->fmt, ##__VA_ARGS__); \
     else libboot_platform_format_string(buf, 4096, "unknown error "LIBBOOT_FMT_UINTN" in group "LIBBOOT_FMT_UINTN, group, type); \
 } while(0)
-void libboot_internal_register_error(libboot_error_group_t group, libboot_error_type_t type, const char* fmt);
+void libboot_internal_register_error(libboot_error_group_t group, libboot_error_type_t type, const char *fmt);
 
 // crc
-unsigned long libboot_crc32(unsigned long crc, const unsigned char* buf, unsigned int len);
+unsigned long libboot_crc32(unsigned long crc, const unsigned char *buf, unsigned int len);
 
 // IO
-void* libboot_internal_io_alloc(boot_io_t* io, boot_uintn_t sz);
-boot_intn_t libboot_internal_io_read(boot_io_t* io, void* buf, boot_uintn_t off, boot_uintn_t sz, void** bufoff);
-void libboot_internal_io_destroy(boot_io_t* io);
+void *libboot_internal_io_alloc(boot_io_t *io, boot_uintn_t sz);
+boot_intn_t libboot_internal_io_read(boot_io_t *io, void *buf, boot_uintn_t off, boot_uintn_t sz, void **bufoff);
+void libboot_internal_io_destroy(boot_io_t *io);
 
 boot_uintn_t libboot_internal_strlcpy(char *dst, const char *src, boot_uintn_t size);
 
 // loaders
-void libboot_internal_ldrmodule_register(ldrmodule_t* mod);
-int libboot_internal_load_rawdata_to_kernel(bootimg_context_t* context);
+void libboot_internal_ldrmodule_register(ldrmodule_t *mod);
+int libboot_internal_load_rawdata_to_kernel(bootimg_context_t *context);
 
 int libboot_internal_ldrmodule_android_init(void);
 int libboot_internal_ldrmodule_efi_init(void);
@@ -121,7 +121,7 @@ int libboot_internal_ldrmodule_qcmbn_init(void);
 int libboot_internal_ldrmodule_gzip_init(void);
 
 // tag modules
-void libboot_internal_tagmodule_register(tagmodule_t* mod);
+void libboot_internal_tagmodule_register(tagmodule_t *mod);
 
 int libboot_internal_tagmodule_qcdt_init(void);
 int libboot_internal_tagmodule_fdt_init(void);

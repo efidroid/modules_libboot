@@ -30,17 +30,18 @@ typedef struct {
     boot_uint32_t cert_chain_size;
 } qcom_bootimg_t;
 
-static int ldrmodule_magictest(boot_io_t* io) {
+static int ldrmodule_magictest(boot_io_t *io)
+{
     int rc;
     int ret = -1;
 
-    qcom_bootimg_t* hdr = libboot_internal_io_alloc(io, sizeof(qcom_bootimg_t));
-    if(!hdr) return ret;
+    qcom_bootimg_t *hdr = libboot_internal_io_alloc(io, sizeof(qcom_bootimg_t));
+    if (!hdr) return ret;
 
-    rc = libboot_internal_io_read(io, hdr, 0, sizeof(*hdr), (void**)&hdr);
-    if(rc<0) goto out;
+    rc = libboot_internal_io_read(io, hdr, 0, sizeof(*hdr), (void **)&hdr);
+    if (rc<0) goto out;
 
-    if(hdr->image_size>0 && hdr->image_size==hdr->code_size+hdr->signature_size+hdr->cert_chain_size) {
+    if (hdr->image_size>0 && hdr->image_size==hdr->code_size+hdr->signature_size+hdr->cert_chain_size) {
         ret = 0;
     }
 
@@ -50,37 +51,38 @@ out:
     return ret;
 }
 
-static int ldrmodule_load(bootimg_context_t* context, boot_uintn_t type, boot_uint8_t recursive) {
+static int ldrmodule_load(bootimg_context_t *context, boot_uintn_t type, boot_uint8_t recursive)
+{
     int rc;
     int ret = -1;
 
-    void* kernel_data = NULL;
+    void *kernel_data = NULL;
 
-    if(!(type&LIBBOOT_LOAD_TYPE_KERNEL))
+    if (!(type&LIBBOOT_LOAD_TYPE_KERNEL))
         return 0;
 
     // allocate header
-    qcom_bootimg_t* hdr = libboot_internal_io_alloc(context->io, sizeof(qcom_bootimg_t));
-    if(!hdr) return ret;
+    qcom_bootimg_t *hdr = libboot_internal_io_alloc(context->io, sizeof(qcom_bootimg_t));
+    if (!hdr) return ret;
 
     // read header
-    rc = libboot_internal_io_read(context->io, hdr, 0, sizeof(*hdr), (void**)&hdr);
-    if(rc<0) goto out;
+    rc = libboot_internal_io_read(context->io, hdr, 0, sizeof(*hdr), (void **)&hdr);
+    if (rc<0) goto out;
 
     // load kernel
     boot_uintn_t kernel_size = hdr->code_size;
     boot_uintn_t kernel_offset = sizeof(*hdr) + hdr->image_src;
     // refalloc
-    if(context->io->is_memio && context->io->pdata_is_allocated) {
+    if (context->io->is_memio && context->io->pdata_is_allocated) {
         kernel_data = libboot_refalloc(context->io->pdata + kernel_offset, kernel_size);
-        if(!kernel_data) goto out;
+        if (!kernel_data) goto out;
     }
     // read from IO
     else {
         kernel_data = libboot_internal_io_alloc(context->io, kernel_size);
-        if(!kernel_data) goto out;
+        if (!kernel_data) goto out;
         rc = libboot_internal_io_read(context->io, kernel_data, kernel_offset, kernel_size, &kernel_data);
-        if(rc<0) {
+        if (rc<0) {
             //libboot_format_error(LIBBOOT_ERROR_GROUP_ANDROID, LIBBOOT_ERROR_ANDROID_READ_KERNEL, rc);
             goto err_free;
         }
@@ -108,20 +110,21 @@ out:
     return ret;
 }
 
-static boot_uint32_t ldrmodule_checksum(boot_io_t* io) {
+static boot_uint32_t ldrmodule_checksum(boot_io_t *io)
+{
     int rc;
     boot_uint32_t ret = 0;
 
     // allocate header
-    qcom_bootimg_t* hdr = libboot_internal_io_alloc(io, sizeof(qcom_bootimg_t));
-    if(!hdr) goto out;
+    qcom_bootimg_t *hdr = libboot_internal_io_alloc(io, sizeof(qcom_bootimg_t));
+    if (!hdr) goto out;
 
     // read header
-    rc = libboot_internal_io_read(io, hdr, 0, sizeof(*hdr), (void**)&hdr);
-    if(rc<0) goto out;
+    rc = libboot_internal_io_read(io, hdr, 0, sizeof(*hdr), (void **)&hdr);
+    if (rc<0) goto out;
 
     // calculate checksum
-    ret = libboot_crc32(0, (void*)hdr, sizeof(*hdr));
+    ret = libboot_crc32(0, (void *)hdr, sizeof(*hdr));
 
 out:
     libboot_free(hdr);
@@ -137,7 +140,8 @@ static ldrmodule_t ldrmodule = {
     .checksum = ldrmodule_checksum,
 };
 
-int libboot_internal_ldrmodule_qcmbn_init(void) {
+int libboot_internal_ldrmodule_qcmbn_init(void)
+{
     libboot_internal_ldrmodule_register(&ldrmodule);
     return 0;
 }

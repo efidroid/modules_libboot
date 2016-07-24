@@ -19,28 +19,29 @@
 
 static boot_uintn_t magic_val = 0x016f2818;
 
-static int ldrmodule_load(bootimg_context_t* context, boot_uintn_t type, boot_uint8_t recursive) {
+static int ldrmodule_load(bootimg_context_t *context, boot_uintn_t type, boot_uint8_t recursive)
+{
 
-    if(!(type&LIBBOOT_LOAD_TYPE_KERNEL))
+    if (!(type&LIBBOOT_LOAD_TYPE_KERNEL))
         return 0;
 
     // we're first, just load the whole zImage into memory
-    if(!context->kernel_data) {
-        if(libboot_internal_load_rawdata_to_kernel(context))
+    if (!context->kernel_data) {
+        if (libboot_internal_load_rawdata_to_kernel(context))
             return -1;
     }
 
     // get zImage size
-    boot_uint8_t* data8 = context->kernel_data;
+    boot_uint8_t *data8 = context->kernel_data;
     boot_uintn_t zimage_start, zimage_end, zimage_size;
     libboot_platform_memmove(&zimage_start, data8 + 0x28, sizeof(zimage_start));
     libboot_platform_memmove(&zimage_end,   data8 + 0x2C, sizeof(zimage_end));
     zimage_size = zimage_end - zimage_start;
 
     // get appended fdt
-    if(zimage_size<context->kernel_size) {
-        void* fdt = libboot_refalloc(context->kernel_data + zimage_size, context->kernel_size - zimage_size);
-        if(!fdt) return -1;
+    if (zimage_size<context->kernel_size) {
+        void *fdt = libboot_refalloc(context->kernel_data + zimage_size, context->kernel_size - zimage_size);
+        if (!fdt) return -1;
 
         libboot_free(context->tags_data);
         context->tags_data = fdt;
@@ -64,7 +65,8 @@ static ldrmodule_t ldrmodule = {
     .load = ldrmodule_load,
 };
 
-int libboot_internal_ldrmodule_zimage_init(void) {
+int libboot_internal_ldrmodule_zimage_init(void)
+{
     libboot_internal_ldrmodule_register(&ldrmodule);
     return 0;
 }

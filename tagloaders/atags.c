@@ -20,8 +20,9 @@
 
 #define ATAG_MAX_SIZE   0x3000
 
-static void* getmemory_callback(void* pdata, boot_uintn_t addr, boot_uintn_t size) {
-    tag_t* tag = pdata;
+static void *getmemory_callback(void *pdata, boot_uintn_t addr, boot_uintn_t size)
+{
+    tag_t *tag = pdata;
 
     tag = tag_next(tag);
     tag->hdr.tag = ATAG_MEM;
@@ -32,17 +33,18 @@ static void* getmemory_callback(void* pdata, boot_uintn_t addr, boot_uintn_t siz
     return tag;
 }
 
-static int tagmodule_patch(bootimg_context_t* context) {
+static int tagmodule_patch(bootimg_context_t *context)
+{
     // atags always get generated
-    if(context->tags_data!=NULL)
+    if (context->tags_data!=NULL)
         return -1;
 
     // allocate data
-    void* data = libboot_alloc(ATAG_MAX_SIZE);
-    if(!data) return -1;
+    void *data = libboot_alloc(ATAG_MAX_SIZE);
+    if (!data) return -1;
 
     // generate atags
-    tag_t* tag = data;
+    tag_t *tag = data;
 
     // core
     tag->hdr.tag  = ATAG_CORE;
@@ -52,7 +54,7 @@ static int tagmodule_patch(bootimg_context_t* context) {
     tag->u.core.rootdev = 0;
 
     // initrd
-    if(context->ramdisk_size) {
+    if (context->ramdisk_size) {
         tag = tag_next(tag);
         tag->hdr.tag = ATAG_INITRD2;
         tag->hdr.size = tag_size(tag_initrd);
@@ -65,7 +67,7 @@ static int tagmodule_patch(bootimg_context_t* context) {
 
     // cmdline
     boot_uintn_t cmdline_len = libboot_cmdline_length(&context->cmdline);
-    if(cmdline_len) {
+    if (cmdline_len) {
         tag = tag_next(tag);
         tag->hdr.tag = ATAG_CMDLINE;
         tag->hdr.size = (sizeof(struct tag_header) + cmdline_len + 1 +  4) >> 2;
@@ -73,7 +75,7 @@ static int tagmodule_patch(bootimg_context_t* context) {
     }
 
     // platform specific tags
-    if(context->add_custom_atags)
+    if (context->add_custom_atags)
         tag  = context->add_custom_atags(tag);
 
     // end
@@ -102,7 +104,8 @@ static tagmodule_t tagmodule = {
     .patch = tagmodule_patch,
 };
 
-int libboot_internal_tagmodule_atags_init(void) {
+int libboot_internal_tagmodule_atags_init(void)
+{
     libboot_internal_tagmodule_register(&tagmodule);
     return 0;
 }

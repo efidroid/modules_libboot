@@ -22,14 +22,16 @@
 #define GZIP_HEADER_LEN 10
 #define GZIP_FILENAME_LIMIT 256
 
-static void zlib_free(voidpf qpaque, void* addr) {
+static void zlib_free(voidpf qpaque, void *addr)
+{
     (void)(qpaque);
-	return libboot_free(addr);
+    return libboot_free(addr);
 }
 
-static void *zlib_alloc(voidpf qpaque, uInt items, uInt size) {
+static void *zlib_alloc(voidpf qpaque, uInt items, uInt size)
+{
     (void)(qpaque);
-	return libboot_alloc(items * size);
+    return libboot_alloc(items * size);
 }
 
 /* decompress gzip file "in_buf", return 0 if decompressed successful,
@@ -42,107 +44,109 @@ static void *zlib_alloc(voidpf qpaque, uInt items, uInt size) {
  * out_len - the length of decompressed data
  */
 static int decompress(unsigned char *in_buf, unsigned int in_len,
-		       unsigned char *out_buf,
-		       unsigned int out_buf_len,
-		       unsigned int *pos,
-		       unsigned int *out_len) {
-	struct z_stream_s *stream;
-	int rc = -1;
-	int i;
+                      unsigned char *out_buf,
+                      unsigned int out_buf_len,
+                      unsigned int *pos,
+                      unsigned int *out_len)
+{
+    struct z_stream_s *stream;
+    int rc = -1;
+    int i;
 
-	if (in_len < GZIP_HEADER_LEN) {
-		return rc;
-	}
-	if (out_buf_len < in_len) {
-		return rc;
-	}
+    if (in_len < GZIP_HEADER_LEN) {
+        return rc;
+    }
+    if (out_buf_len < in_len) {
+        return rc;
+    }
 
-	stream = libboot_alloc(sizeof(*stream));
-	if (stream == NULL) {
-		return rc;
-	}
+    stream = libboot_alloc(sizeof(*stream));
+    if (stream == NULL) {
+        return rc;
+    }
 
-	stream->zalloc = zlib_alloc;
-	stream->zfree = zlib_free;
-	stream->next_out = out_buf;
-	stream->avail_out = out_buf_len;
+    stream->zalloc = zlib_alloc;
+    stream->zfree = zlib_free;
+    stream->next_out = out_buf;
+    stream->avail_out = out_buf_len;
 
-	/* skip over gzip header */
-	stream->next_in = in_buf + GZIP_HEADER_LEN;
-	stream->avail_in = out_buf_len - GZIP_HEADER_LEN;
-	/* skip over asciz filename */
-	if (in_buf[3] & 0x8) {
-		for (i = 0; i < GZIP_FILENAME_LIMIT && *stream->next_in++; i++) {
-			if (stream->avail_in == 0) {
-				goto gunzip_end;
-			}
-			--stream->avail_in;
-		}
-	}
+    /* skip over gzip header */
+    stream->next_in = in_buf + GZIP_HEADER_LEN;
+    stream->avail_in = out_buf_len - GZIP_HEADER_LEN;
+    /* skip over asciz filename */
+    if (in_buf[3] & 0x8) {
+        for (i = 0; i < GZIP_FILENAME_LIMIT && *stream->next_in++; i++) {
+            if (stream->avail_in == 0) {
+                goto gunzip_end;
+            }
+            --stream->avail_in;
+        }
+    }
 
-	rc = inflateInit2(stream, -MAX_WBITS);
-	if (rc != Z_OK) {
-		goto gunzip_end;
-	}
+    rc = inflateInit2(stream, -MAX_WBITS);
+    if (rc != Z_OK) {
+        goto gunzip_end;
+    }
 
-	rc = inflate(stream, 0);
-	/* Z_STREAM_END is "we unpacked it all" */
-	if (rc == Z_STREAM_END) {
-		rc = 0;
-	} else if (rc != Z_OK) {
-		rc = -1;
-	}
+    rc = inflate(stream, 0);
+    /* Z_STREAM_END is "we unpacked it all" */
+    if (rc == Z_STREAM_END) {
+        rc = 0;
+    } else if (rc != Z_OK) {
+        rc = -1;
+    }
 
-	inflateEnd(stream);
-	if (pos)
-		/* alculation the length of the compressed package */
-		*pos = stream->next_in - in_buf + 8;
+    inflateEnd(stream);
+    if (pos)
+        /* alculation the length of the compressed package */
+        *pos = stream->next_in - in_buf + 8;
 
-	if (out_len)
-		*out_len = stream->total_out;
+    if (out_len)
+        *out_len = stream->total_out;
 
 gunzip_end:
-	libboot_free(stream);
-	return rc; /* returns 0 if decompressed successful */
+    libboot_free(stream);
+    return rc; /* returns 0 if decompressed successful */
 }
 
-static int ldrmodule_load(bootimg_context_t* context, boot_uintn_t type, boot_uint8_t recursive) {
+static int ldrmodule_load(bootimg_context_t *context, boot_uintn_t type, boot_uint8_t recursive)
+{
     int rc;
     unsigned int out_len = 0;
     unsigned int pos = 0;
-    void* data = NULL;
+    void *data = NULL;
 
-    if(!(type&LIBBOOT_LOAD_TYPE_KERNEL))
+    if (!(type&LIBBOOT_LOAD_TYPE_KERNEL))
         return 0;
 
     // we're first, just load the whole thing into memory
     // TODO: remove this and use chunk based decompression
     // we also have a problem with trailing garbage here if this is the root IO
-    if(!context->kernel_data) {
-        if(libboot_internal_load_rawdata_to_kernel(context))
+    if (!context->kernel_data) {
+        if (libboot_internal_load_rawdata_to_kernel(context))
             return -1;
     }
 
     // get size
-    boot_uint32_t* size = context->kernel_data - sizeof(*size);
+    boot_uint32_t *size = context->kernel_data - sizeof(*size);
 
     // allocate data
     data = libboot_internal_io_alloc(context->io, *size);
-    if(!data) {
+    if (!data) {
         rc = -1;
         goto out;
     }
 
     // extract
     rc = decompress(context->kernel_data, context->kernel_size, data, *size, &pos, &out_len);
-    if(rc) {
+    if (rc) {
         goto out_free;
     }
 
     // find appended fdt
-    if(pos<context->kernel_size) {
-        void* fdt = libboot_refalloc(context->kernel_data + pos, context->kernel_size - pos);
-        if(!fdt) return -1;
+    if (pos<context->kernel_size) {
+        void *fdt = libboot_refalloc(context->kernel_data + pos, context->kernel_size - pos);
+        if (!fdt) return -1;
 
         libboot_free(context->tags_data);
         context->tags_data = fdt;
@@ -177,7 +181,8 @@ static ldrmodule_t ldrmodule = {
     .load = ldrmodule_load,
 };
 
-int libboot_internal_ldrmodule_gzip_init(void) {
+int libboot_internal_ldrmodule_gzip_init(void)
+{
     libboot_internal_ldrmodule_register(&ldrmodule);
     return 0;
 }

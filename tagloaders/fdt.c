@@ -21,7 +21,7 @@
 #define DTB_PAD_SIZE 1024
 
 typedef struct {
-    void* fdt;
+    void *fdt;
     boot_uint32_t memoffset;
     boot_uint8_t do_append;
 
@@ -31,7 +31,8 @@ typedef struct {
     int rc;
 } meminfo_pdata_t;
 
-static int fdtloader_get_cell_sizes(meminfo_pdata_t* pdata) {
+static int fdtloader_get_cell_sizes(meminfo_pdata_t *pdata)
+{
     int rc;
     int len;
     const boot_uint32_t *valp;
@@ -50,8 +51,7 @@ static int fdtloader_get_cell_sizes(meminfo_pdata_t* pdata) {
         if (len == -FDT_ERR_NOTFOUND)
             addr_cell_size = 2;
         else return -1;
-    }
-    else {
+    } else {
         addr_cell_size = fdt32_to_cpu(*valp);
     }
 
@@ -61,8 +61,7 @@ static int fdtloader_get_cell_sizes(meminfo_pdata_t* pdata) {
         if (len == -FDT_ERR_NOTFOUND)
             size_cell_size = 2;
         else return -1;
-    }
-    else {
+    } else {
         size_cell_size = fdt32_to_cpu(*valp);
     }
 
@@ -72,7 +71,8 @@ static int fdtloader_get_cell_sizes(meminfo_pdata_t* pdata) {
     return 0;
 }
 
-static int fdtloader_add_single_meminfo(meminfo_pdata_t* pdata, boot_uint64_t addr, boot_uint64_t size) {
+static int fdtloader_add_single_meminfo(meminfo_pdata_t *pdata, boot_uint64_t addr, boot_uint64_t size)
+{
     int rc = 0;
 
     // set first addr
@@ -112,11 +112,12 @@ static int fdtloader_add_single_meminfo(meminfo_pdata_t* pdata, boot_uint64_t ad
     return 0;
 }
 
-static void* getmemory_callback(void* _pdata, boot_uintn_t addr, boot_uintn_t size) {
-    meminfo_pdata_t* pdata = _pdata;
+static void *getmemory_callback(void *_pdata, boot_uintn_t addr, boot_uintn_t size)
+{
+    meminfo_pdata_t *pdata = _pdata;
 
     // a previous call failed
-    if(pdata->rc) return pdata;
+    if (pdata->rc) return pdata;
 
     // add meminfo
     pdata->rc = fdtloader_add_single_meminfo(pdata, (boot_uint64_t)addr, (boot_uint64_t)size);
@@ -124,7 +125,8 @@ static void* getmemory_callback(void* _pdata, boot_uintn_t addr, boot_uintn_t si
     return pdata;
 }
 
-static int fdtloader_add_meminfo(void* fdt) {
+static int fdtloader_add_meminfo(void *fdt)
+{
     int rc;
 
     meminfo_pdata_t pdata = {
@@ -138,7 +140,7 @@ static int fdtloader_add_meminfo(void* fdt) {
 
     // get memory node offset
     rc = fdt_path_offset(fdt, "/memory");
-    if(rc<0) return -1;
+    if (rc<0) return -1;
     pdata.memoffset = rc;
 
     // get cell sizes
@@ -146,20 +148,21 @@ static int fdtloader_add_meminfo(void* fdt) {
 
     // add all memory ranges
     libboot_platform_getmemory(&pdata, getmemory_callback);
-    if(pdata.rc) return -1;
+    if (pdata.rc) return -1;
 
     return 0;
 }
 
-static int tagmodule_patch(bootimg_context_t* context) {
+static int tagmodule_patch(bootimg_context_t *context)
+{
     int rc;
     int ret = -1;
-    void* fdt = NULL;
+    void *fdt = NULL;
     boot_uint32_t offset;
 
     // use default fdt
-    if(context->tags_data==NULL) {
-        if(!context->default_fdt) return -1;
+    if (context->tags_data==NULL) {
+        if (!context->default_fdt) return -1;
 
         context->tags_data = context->default_fdt;
         context->tags_size = fdt_totalsize(context->tags_data);
@@ -168,30 +171,30 @@ static int tagmodule_patch(bootimg_context_t* context) {
 
     // check fdt header
     rc = fdt_check_header(context->tags_data);
-    if(rc) goto out;
+    if (rc) goto out;
 
     // allocate fdt copy with padding
     boot_uintn_t newsize = fdt_totalsize(context->tags_data) + DTB_PAD_SIZE;
     fdt = libboot_alloc(newsize);
-    if(!fdt) goto out;
+    if (!fdt) goto out;
 
     // copy fdt to new memory
     rc = fdt_open_into(context->tags_data, fdt, newsize);
-    if(rc) goto out_free;
+    if (rc) goto out_free;
 
     // add memory info
     rc = fdtloader_add_meminfo(fdt);
-    if(rc<0) goto out_free;
+    if (rc<0) goto out_free;
 
     // get chosen node offset
     rc = fdt_path_offset(fdt, "/chosen");
-    if(rc<0) goto out_free;
+    if (rc<0) goto out_free;
     offset = rc;
 
     // cmdline
     boot_uintn_t cmdline_len = libboot_cmdline_length(&context->cmdline);
-    if(cmdline_len) {
-        char* cmdline = libboot_alloc(cmdline_len);
+    if (cmdline_len) {
+        char *cmdline = libboot_alloc(cmdline_len);
         libboot_cmdline_generate(&context->cmdline, cmdline, cmdline_len);
 
         rc = fdt_appendprop_string(fdt, offset, "bootargs", cmdline);
@@ -200,16 +203,16 @@ static int tagmodule_patch(bootimg_context_t* context) {
     }
 
     // ramdisk
-    if(context->ramdisk_size) {
+    if (context->ramdisk_size) {
         rc = fdt_setprop_u32(fdt, offset, "linux,initrd-start", (boot_uint32_t)context->ramdisk_addr);
-        if(rc) goto out_free;
+        if (rc) goto out_free;
 
         rc = fdt_setprop_u32(fdt, offset, "linux,initrd-end", ((boot_uint32_t)context->ramdisk_addr + context->ramdisk_size));
-        if(rc) goto out_free;
+        if (rc) goto out_free;
     }
 
     // platform specific patches
-    if(context->patch_fdt)
+    if (context->patch_fdt)
         context->patch_fdt(fdt);
 
     // pack fdt
@@ -242,7 +245,8 @@ static tagmodule_t tagmodule = {
     .patch = tagmodule_patch,
 };
 
-int libboot_internal_tagmodule_fdt_init(void) {
+int libboot_internal_tagmodule_fdt_init(void)
+{
     magic = fdt32_to_cpu(FDT_MAGIC);
     libboot_internal_tagmodule_register(&tagmodule);
     return 0;

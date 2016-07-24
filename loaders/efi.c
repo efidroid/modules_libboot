@@ -25,7 +25,8 @@ static ldrmodule_t ldrmodule = {
     .magic_val = "MZ",
 };
 
-int libboot_internal_ldrmodule_efi_init(void) {
+int libboot_internal_ldrmodule_efi_init(void)
+{
     libboot_internal_ldrmodule_register(&ldrmodule);
     return 0;
 }
