@@ -31,7 +31,6 @@
 #include <lib/boot/internal/qcdt.h>
 #include <libfdt.h>
 
-//static dt_mem_node_info_t mem_node;
 static int devtree_entry_is_excact_match(dt_entry_t *cur_dt_entry, dt_entry_node_t *dt_list);
 static dt_entry_t *devtree_get_best_entry(dt_entry_node_t *dt_list);
 static int devtree_delete_incompatible_entries2(dt_entry_node_t *dt_list, boot_uint32_t dtb_info);
