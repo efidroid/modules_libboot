@@ -117,24 +117,14 @@ static int ldrmodule_load(bootimg_context_t* context, boot_uintn_t type, boot_ui
 
     // we're first, just load the whole thing into memory
     // TODO: remove this and use chunk based decompression
-    // we also have a problem with trailing garbage here
+    // we also have a problem with trailing garbage here if this is the root IO
     if(!context->kernel_data) {
         if(libboot_internal_load_rawdata_to_kernel(context))
             return -1;
     }
 
-    // calculate image size
-    boot_uintn_t imgsize = context->io->numblocks*context->io->blksz;
-
-    // allocate size
-    boot_uint32_t* size = libboot_internal_io_alloc(context->io, sizeof(boot_uint32_t));
-    if(!size) return -1;
-
     // get size
-    rc = libboot_internal_io_read(context->io, size, imgsize-sizeof(*size), sizeof(*size), (void**)&size);
-    if(rc<0) {
-        goto out;
-    }
+    boot_uint32_t* size = context->kernel_data - sizeof(*size);
 
     // allocate data
     data = libboot_internal_io_alloc(context->io, *size);
@@ -144,9 +134,18 @@ static int ldrmodule_load(bootimg_context_t* context, boot_uintn_t type, boot_ui
     }
 
     // extract
-    rc = decompress(context->kernel_data, imgsize, data, *size, &pos, &out_len);
+    rc = decompress(context->kernel_data, context->kernel_size, data, *size, &pos, &out_len);
     if(rc) {
         goto out_free;
+    }
+
+    // find appended fdt
+    if(pos<context->kernel_size) {
+        void* fdt = libboot_refalloc(context->kernel_data + pos, context->kernel_size - pos);
+        if(!fdt) return -1;
+
+        libboot_free(context->tags_data);
+        context->tags_data = fdt;
     }
 
     // re-identify with kernel as image
@@ -157,8 +156,6 @@ static int ldrmodule_load(bootimg_context_t* context, boot_uintn_t type, boot_ui
     context->kernel_data = data;
     context->kernel_size = out_len;
 
-    // TODO: find appended fdt
-
     rc = 0;
     goto out;
 
@@ -166,8 +163,6 @@ out_free:
     libboot_free(data);
 
 out:
-    libboot_free(size);
-
     return rc;
 }
 
