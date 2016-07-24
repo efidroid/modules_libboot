@@ -40,14 +40,26 @@ static int tagmodule_patch(bootimg_context_t* context) {
         return -1;
     }
 
-    // allocate data
-    void* data = libboot_alloc(dt_entry.size);
-    if(!data) return -1;
+    // refalloc
+    void* fdt;
+    if(table!=context->default_qcdt) {
+        fdt = libboot_refalloc((boot_uint8_t*)(table) + dt_entry.offset, dt_entry.size);
+        if(!fdt) return -1;
+    }
 
-    // copy fdt
-    libboot_platform_memmove(data, (boot_uint8_t*)(table) + dt_entry.offset, dt_entry.size);
+    // make a copy
+    else {
+        // allocate data
+        fdt = libboot_alloc(dt_entry.size);
+        if(!fdt) return -1;
+
+        // copy fdt
+        libboot_platform_memmove(fdt, (boot_uint8_t*)(table) + dt_entry.offset, dt_entry.size);
+    }
+
+    // replace tags
     libboot_free(context->tags_data);
-    context->tags_data = data;
+    context->tags_data = fdt;
     context->tags_size = dt_entry.size;
     context->tags_type = LIBBOOT_TAGS_TYPE_FDT;
 
