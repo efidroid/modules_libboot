@@ -215,10 +215,8 @@ static int tagmodule_patch(bootimg_context_t* context) {
     // pack fdt
     fdt_pack(fdt);
 
-    // free old fdt
-    libboot_free(context->tags_data);
-
     // set new fdt
+    libboot_free(context->tags_data);
     context->tags_data = fdt;
     context->tags_size = fdt_totalsize(fdt);
     context->tags_ready = 1;
