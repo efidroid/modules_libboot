@@ -152,6 +152,7 @@ void  libboot_free(void *ptr);
 
 // basic loading
 int libboot_init(void);
+void libboot_uninit(void);
 void libboot_init_context(bootimg_context_t* context);
 void libboot_free_context(bootimg_context_t* context);
 int libboot_identify(boot_io_t* io, bootimg_context_t* context);

@@ -360,6 +360,23 @@ int libboot_init(void) {
     return 0;
 }
 
+void libboot_uninit(void) {
+    // error messages
+    while(!libboot_list_is_empty(&error_formats)) {
+        libboot_error_format_t* format = libboot_list_remove_tail_type(&error_formats, libboot_error_format_t, node);
+        libboot_free(format);
+    }
+
+    // error messages
+    while(!libboot_list_is_empty(&allocations)) {
+        allocation_t* alloc = libboot_list_remove_tail_type(&allocations, allocation_t, node);
+
+        LOGE("MEMLEAK: 0x%08lx-0x%08lx size=0x%08lx refs=%lu\n", alloc->addr, alloc->addr+alloc->size, alloc->size, alloc->refs);
+        alloc->refs = 1;
+        libboot_free((void*)alloc->addr);
+    }
+}
+
 void libboot_init_context(bootimg_context_t* context) {
     if(!context) return;
 
@@ -416,12 +433,6 @@ int libboot_load_partial(bootimg_context_t* context, boot_uintn_t type, boot_uin
         }
 
         if(!recursive) break;
-    }
-
-
-    if(!rc && recursive) {
-        libboot_internal_io_destroy(context->io);
-        context->io = NULL;
     }
 
     return rc;
@@ -519,10 +530,6 @@ int libboot_prepare(bootimg_context_t* context) {
 
     // the image wasn't loaded correctly
     if(context->type!=BOOTIMG_TYPE_RAW)
-        return -1;
-
-    // libboot_load destroys the IO struct
-    if(context->io)
         return -1;
 
     context->kernel_arguments[0] = 0;

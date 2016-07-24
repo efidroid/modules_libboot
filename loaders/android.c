@@ -54,12 +54,23 @@ static int ldrmodule_load(bootimg_context_t* context, boot_uintn_t type, boot_ui
     // load kernel
     if(type&LIBBOOT_LOAD_TYPE_KERNEL) {
         kernel_size = hdr->kernel_size;
-        kernel_data = libboot_internal_io_alloc(context->io, kernel_size);
-        if(!kernel_data) goto err_free;
-        rc = libboot_internal_io_read(context->io, kernel_data, off_kernel, kernel_size, &kernel_data);
-        if(rc<0) {
-            libboot_format_error(LIBBOOT_ERROR_GROUP_ANDROID, LIBBOOT_ERROR_ANDROID_READ_KERNEL, rc);
-            goto err_free;
+
+        // refalloc
+        if(context->io->is_memio && context->io->pdata_is_allocated) {
+            kernel_data = libboot_refalloc(context->io->pdata + off_kernel, kernel_size);
+            if(!kernel_data) goto err_free;
+        }
+
+        // read from IO
+        else {
+            kernel_data = libboot_internal_io_alloc(context->io, kernel_size);
+            if(!kernel_data) goto err_free;
+
+            rc = libboot_internal_io_read(context->io, kernel_data, off_kernel, kernel_size, &kernel_data);
+            if(rc<0) {
+                libboot_format_error(LIBBOOT_ERROR_GROUP_ANDROID, LIBBOOT_ERROR_ANDROID_READ_KERNEL, rc);
+                goto err_free;
+            }
         }
     }
 
@@ -67,12 +78,22 @@ static int ldrmodule_load(bootimg_context_t* context, boot_uintn_t type, boot_ui
     if(type&LIBBOOT_LOAD_TYPE_RAMDISK) {
         ramdisk_size = hdr->ramdisk_size;
         if(ramdisk_size>0) {
-            ramdisk_data = libboot_internal_io_alloc(context->io, ramdisk_size);
-            if(!ramdisk_data) goto err_free;
-            rc = libboot_internal_io_read(context->io, ramdisk_data, off_ramdisk, ramdisk_size, &ramdisk_data);
-            if(rc<0) {
-                libboot_format_error(LIBBOOT_ERROR_GROUP_ANDROID, LIBBOOT_ERROR_ANDROID_READ_RAMDISK, rc);
-                goto err_free;
+            // refalloc
+            if(context->io->is_memio && context->io->pdata_is_allocated) {
+                ramdisk_data = libboot_refalloc(context->io->pdata + off_ramdisk, ramdisk_size);
+                if(!ramdisk_data) goto err_free;
+            }
+
+            // read from IO
+            else {
+                ramdisk_data = libboot_internal_io_alloc(context->io, ramdisk_size);
+                if(!ramdisk_data) goto err_free;
+
+                rc = libboot_internal_io_read(context->io, ramdisk_data, off_ramdisk, ramdisk_size, &ramdisk_data);
+                if(rc<0) {
+                    libboot_format_error(LIBBOOT_ERROR_GROUP_ANDROID, LIBBOOT_ERROR_ANDROID_READ_RAMDISK, rc);
+                    goto err_free;
+                }
             }
         }
     }
@@ -81,12 +102,22 @@ static int ldrmodule_load(bootimg_context_t* context, boot_uintn_t type, boot_ui
     if(type&LIBBOOT_LOAD_TYPE_TAGS) {
         tags_size = hdr->dt_size;
         if(tags_size>0) {
-            tags_data = libboot_internal_io_alloc(context->io, tags_size);
-            if(!tags_data) goto err_free;
-            rc = libboot_internal_io_read(context->io, tags_data, off_tags, tags_size, &tags_data);
-            if(rc<0) {
-                libboot_format_error(LIBBOOT_ERROR_GROUP_ANDROID, LIBBOOT_ERROR_ANDROID_READ_TAGS, rc);
-                goto err_free;
+            // refalloc
+            if(context->io->is_memio && context->io->pdata_is_allocated) {
+                tags_data = libboot_refalloc(context->io->pdata + off_tags, tags_size);
+                if(!tags_data) goto err_free;
+            }
+
+            // read from IO
+            else {
+                tags_data = libboot_internal_io_alloc(context->io, tags_size);
+                if(!tags_data) goto err_free;
+
+                rc = libboot_internal_io_read(context->io, tags_data, off_tags, tags_size, &tags_data);
+                if(rc<0) {
+                    libboot_format_error(LIBBOOT_ERROR_GROUP_ANDROID, LIBBOOT_ERROR_ANDROID_READ_TAGS, rc);
+                    goto err_free;
+                }
             }
         }
     }
@@ -99,43 +130,40 @@ static int ldrmodule_load(bootimg_context_t* context, boot_uintn_t type, boot_ui
         libboot_cmdline_addall(&context->cmdline, (char*)hdr->extra_cmdline, 1);
     }
 
-    // we assume that this always holds a linux image, if not it doesn't hurt to generate (unused) tags
-    if(type&LIBBOOT_LOAD_TYPE_KERNEL)
+    // set data
+    if(type&LIBBOOT_LOAD_TYPE_KERNEL) {
+        // re-identify with kernel as image
+        rc = libboot_identify_memory(kernel_data, kernel_size, context);
+        if(rc) {
+            goto err_free;
+        }
+
+        // the data is used by context->io now, so refalloc it
+        if(!libboot_refalloc(kernel_data, kernel_size)) {
+            goto err_free;
+        }
+        context->io->pdata_is_allocated = 1;
+
+        // we assume that this always holds a linux image, if not it doesn't hurt to generate (unused) tags
         context->kernel_is_linux = 1;
 
-    // remove old data
-    if(type&LIBBOOT_LOAD_TYPE_KERNEL)
         libboot_free(context->kernel_data);
-    if(type&LIBBOOT_LOAD_TYPE_RAMDISK)
-        libboot_free(context->ramdisk_data);
-    if(type&LIBBOOT_LOAD_TYPE_TAGS)
-        libboot_free(context->tags_data);
-
-    // set new data
-    if(type&LIBBOOT_LOAD_TYPE_KERNEL) {
         context->kernel_data = kernel_data;
         context->kernel_size = kernel_size;
+        context->kernel_addr = hdr->kernel_addr;
     }
     if(type&LIBBOOT_LOAD_TYPE_RAMDISK) {
+        libboot_free(context->ramdisk_data);
         context->ramdisk_data = ramdisk_data;
         context->ramdisk_size = ramdisk_size;
+        context->ramdisk_addr = hdr->ramdisk_addr;
     }
     if(type&LIBBOOT_LOAD_TYPE_TAGS) {
+        libboot_free(context->tags_data);
         context->tags_data = tags_data;
         context->tags_size = tags_size;
-    }
-
-    // set addresses as requested
-    if(type&LIBBOOT_LOAD_TYPE_KERNEL)
-        context->kernel_addr = hdr->kernel_addr;
-    if(type&LIBBOOT_LOAD_TYPE_RAMDISK)
-        context->ramdisk_addr = hdr->ramdisk_addr;
-    if(type&LIBBOOT_LOAD_TYPE_TAGS)
         context->tags_addr = hdr->tags_addr;
-
-    // re-identify with kernel as image
-    if(type&LIBBOOT_LOAD_TYPE_KERNEL)
-        libboot_identify_memory(context->kernel_data, context->kernel_size, context);
+    }
 
     // success
     ret = 0;
