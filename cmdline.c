@@ -85,11 +85,17 @@ boot_uintn_t libboot_cmdline_length(libboot_list_node_t *list)
 
     cmdline_item_t *item;
     libboot_list_for_every_entry(list, item, cmdline_item_t, node) {
+        // leading space
         if (len!=0) len++;
+        // name
         len+=libboot_platform_strlen(item->name);
+        // '=' and value
         if (item->value)
             len+= 1 + libboot_platform_strlen(item->value);
     }
+
+    // 0 terminator
+    if (len>0) len++;
 
     return len;
 }
