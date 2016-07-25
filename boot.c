@@ -499,16 +499,33 @@ int libboot_unload(bootimg_context_t *context)
 
     // refalloc rootio
     if (context->rootio) {
-        boot_io_t *rootio = libboot_refalloc(context->rootio, 0);
-        if (!rootio) return -1;
-        context->io = rootio;
+        boot_io_t *io = libboot_refalloc(context->rootio, 0);
+        if (!io) return -1;
+        context->io = io;
     }
+
+    // reset type
+    context->type = context->outer_type;
 
     // delete data
     libboot_free(context->kernel_data);
     libboot_free(context->ramdisk_data);
     libboot_free(context->tags_data);
     libboot_cmdline_free(&context->cmdline);
+
+    // reset all values
+    context->kernel_data = NULL;
+    context->kernel_size = 0;
+    context->kernel_addr = 0;
+    context->kernel_is_linux = 0;
+    context->ramdisk_data = NULL;
+    context->ramdisk_size = 0;
+    context->ramdisk_addr = 0;
+    context->tags_data = NULL;
+    context->tags_size = 0;
+    context->tags_addr = 0;
+    context->tags_ready = 0;
+    context->tags_type = LIBBOOT_TAGS_TYPE_UNKNOWN;
 
     return 0;
 }
