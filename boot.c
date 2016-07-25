@@ -427,6 +427,7 @@ void libboot_init_context(bootimg_context_t *context)
     libboot_cmdline_init(&context->cmdline);
     context->type = BOOTIMG_TYPE_UNKNOWN;
     context->outer_type = BOOTIMG_TYPE_UNKNOWN;
+    context->tags_type = LIBBOOT_TAGS_TYPE_UNKNOWN;
 }
 
 void libboot_free_context(bootimg_context_t *context)
