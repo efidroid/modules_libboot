@@ -421,7 +421,6 @@ int libboot_init(void)
     libboot_internal_register_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_LOAD_NO_IO, "can't load context without IO");
     libboot_internal_register_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_LOAD_MODULE_ERROR, "loader(%"LIBBOOT_FMT_INT") returned %"LIBBOOT_FMT_INT);
     libboot_internal_register_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_LOAD_NO_MATCH, "can't find loader for type %"LIBBOOT_FMT_INT);
-    libboot_internal_register_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_IDENTIFYTAGS_NO_MATCH, "can't find identify tags");
     libboot_internal_register_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_GENTAGS_MODULE_ERROR, "tagloader(%"LIBBOOT_FMT_INT") returned %"LIBBOOT_FMT_INT);
     libboot_internal_register_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_GENTAGS_NO_MATCH, "can't find tagloader for type %"LIBBOOT_FMT_INT);
 
@@ -604,12 +603,6 @@ static int libboot_identify_tags(bootimg_context_t *context)
                 break;
             }
         }
-    }
-
-    // no match
-    if(type==LIBBOOT_TAGS_TYPE_UNKNOWN) {
-        libboot_format_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_IDENTIFYTAGS_NO_MATCH);
-        return -1;
     }
 
     // set type
