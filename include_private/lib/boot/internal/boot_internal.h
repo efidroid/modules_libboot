@@ -112,7 +112,7 @@ char *libboot_internal_error_stack_alloc(void);
     } while(0)
 #else
 #define libboot_internal_format_errorstring(buf, sz, fmt, ...) \
-    libboot_platform_format_string(buf, sz, fmt, ##__VA_ARGS__);
+    libboot_platform_format_string(buf, sz, fmt, ##__VA_ARGS__)
 #endif
 
 #if DEBUG_ERROR_DIRECTPRINT
