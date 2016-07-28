@@ -33,7 +33,7 @@ int   libboot_platform_memcmp(const void *s1, const void *s2, boot_uintn_t n);
 void *libboot_platform_memset(void *s, int c, boot_uintn_t n);
 void *libboot_platform_alloc(boot_uintn_t size);
 void  libboot_platform_free(void *ptr);
-void  libboot_platform_format_string(char *buf, boot_uintn_t sz, const char *fmt, ...);
+int   libboot_platform_format_string(char *buf, boot_uintn_t sz, const char *fmt, ...) __attribute__((__format__ (__printf__, 3, 4)));
 char *libboot_platform_strdup(const char *s);
 char *libboot_platform_strtok_r(char *str, const char *delim, char **saveptr);
 char *libboot_platform_strchr(const char *s, int c);

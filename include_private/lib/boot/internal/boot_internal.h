@@ -21,6 +21,15 @@
 #include <lib/boot/internal/list.h>
 #include <lib/boot/internal/platform.h>
 
+// default settings
+#ifndef DEBUG_ERROR_SOURCE
+#define DEBUG_ERROR_SOURCE 0
+#endif
+
+#ifndef DEBUG_ERROR_DIRECTPRINT
+#define DEBUG_ERROR_DIRECTPRINT 0
+#endif
+
 // stdlib
 #ifndef NULL
 #define NULL ((void*)0)
@@ -90,12 +99,36 @@ typedef struct {
 libboot_error_format_t *libboot_internal_get_error_format(libboot_error_group_t group, libboot_error_type_t type);
 char *libboot_internal_error_stack_alloc(void);
 
+#if DEBUG_ERROR_SOURCE
+#define libboot_internal_format_errorstring(buf, sz, fmt, ...) \
+    do { \
+        boot_uintn_t __macro__szleft = (sz); \
+        char* __macro__bufptr = (buf); \
+        int __macro__rc = libboot_platform_format_string(__macro__bufptr, __macro__szleft, "[%s:%u] ", __func__, __LINE__); \
+        if(__macro__rc<0) break; \
+        __macro__szleft -= __macro__rc; \
+        __macro__bufptr += __macro__rc; \
+        libboot_platform_format_string(__macro__bufptr, __macro__szleft, fmt, ##__VA_ARGS__); \
+    } while(0)
+#else
+#define libboot_internal_format_errorstring(buf, sz, fmt, ...) \
+    libboot_platform_format_string(buf, sz, fmt, ##__VA_ARGS__);
+#endif
+
+#if DEBUG_ERROR_DIRECTPRINT
+#define libboot_internal_error_directprint(buf) \
+    LOGE("%s\n", buf);
+#else
+#define libboot_internal_error_directprint(buf)
+#endif
+
 #define libboot_format_error(group, type, ...) do {\
-    char* buf = libboot_internal_error_stack_alloc();\
-    if(!buf) break; \
-    libboot_error_format_t *format = libboot_internal_get_error_format(group, type); \
-    if(format) libboot_platform_format_string(buf, 4096, format->fmt, ##__VA_ARGS__); \
-    else libboot_platform_format_string(buf, 4096, "unknown error %"LIBBOOT_FMT_UINTN" in group "LIBBOOT_FMT_UINTN, group, type); \
+    char* __macro__buf = libboot_internal_error_stack_alloc();\
+    if(!__macro__buf) break; \
+    libboot_error_format_t *__macro__format = libboot_internal_get_error_format(group, type); \
+    if(__macro__format) libboot_internal_format_errorstring(__macro__buf, 4096, __macro__format->fmt, ##__VA_ARGS__); \
+    else libboot_internal_format_errorstring(__macro__buf, 4096, "unknown error %"LIBBOOT_FMT_INT" in group %"LIBBOOT_FMT_INT, group, type); \
+    libboot_internal_error_directprint(__macro__buf); \
 } while(0)
 void libboot_internal_register_error(libboot_error_group_t group, libboot_error_type_t type, const char *fmt);
 
