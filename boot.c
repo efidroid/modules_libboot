@@ -91,10 +91,15 @@ void libboot_internal_tagmodule_register(tagmodule_t *mod)
 void *libboot_alloc(boot_uintn_t size)
 {
     void *mem = libboot_platform_alloc(size);
-    if (!mem) return NULL;
+    if (!mem) {
+        libboot_format_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_OUT_OF_MEMORY);
+        return NULL;
+    }
+
 
     allocation_t *alloc = libboot_platform_alloc(sizeof(allocation_t));
     if (!alloc) {
+        libboot_format_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_OUT_OF_MEMORY);
         libboot_free(mem);
         return NULL;
     }
@@ -121,8 +126,10 @@ void *libboot_refalloc(void *ptr, boot_uintn_t size)
     libboot_list_for_every_entry(&allocations, alloc, allocation_t, node) {
         if (addr>=alloc->addr && addr<alloc->addr+alloc->size) {
             // the size exceeds the range
-            if (addr+size>alloc->addr+alloc->size)
+            if (addr+size>alloc->addr+alloc->size) {
+                libboot_format_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_REFALLOC_INVALID, addr, size, alloc->addr, alloc->size);
                 return NULL;
+            }
 
             alloc->refs++;
 #if DEBUG_ALLOCATIONS
@@ -132,6 +139,7 @@ void *libboot_refalloc(void *ptr, boot_uintn_t size)
         }
     }
 
+    libboot_format_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_REFALLOC_NOT_FOUND, addr, size);
     return NULL;
 }
 
@@ -191,7 +199,10 @@ boot_intn_t libboot_internal_io_read(boot_io_t *io, void *buf, boot_uintn_t off,
     boot_uintn_t off_aligned = ROUNDDOWN(off, io->blksz);
     boot_uintn_t alignment_off = off - off_aligned;
     boot_intn_t rc = io->read(io, buf, off_aligned/io->blksz, IO_ALIGN(io, alignment_off+sz)/io->blksz);
-    if (rc<=0) return rc;
+    if (rc<=0) {
+        libboot_format_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_IO_READ, rc);
+        return rc;
+    }
 
     *bufoff = buf + alignment_off;
 
@@ -267,6 +278,7 @@ do_free:
     if (type==BOOTIMG_TYPE_UNKNOWN) {
         // this is the first scan and we don't have a match!
         if (!context->rootio) {
+            libboot_format_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_IDENTIFY_NO_MATCH);
             rc = -1;
         }
 
@@ -286,8 +298,10 @@ static boot_intn_t internal_io_fn_mem_read(boot_io_t *io, void *buf, boot_uintn_
 {
     boot_uintn_t src = ((boot_uintn_t)io->pdata)+blkoff;
 
-    if (blkoff+count>io->numblocks)
+    if (blkoff+count>io->numblocks) {
+        libboot_format_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_MEMIO_READ_ERROR, blkoff, count, io->numblocks);
         return -1;
+    }
 
     libboot_platform_memmove(buf, (void *)src, count);
 
@@ -396,7 +410,25 @@ int libboot_init(void)
     libboot_internal_register_error(LIBBOOT_ERROR_GROUP_ANDROID, LIBBOOT_ERROR_ANDROID_READ_RAMDISK, "can't read ramdisk: %"LIBBOOT_FMT_INT);
     libboot_internal_register_error(LIBBOOT_ERROR_GROUP_ANDROID, LIBBOOT_ERROR_ANDROID_READ_TAGS, "can't read tags: %"LIBBOOT_FMT_INT);
     libboot_internal_register_error(LIBBOOT_ERROR_GROUP_ANDROID, LIBBOOT_ERROR_ANDROID_ALLOC_CMDLINE, "can't allocate cmdline");
+
     libboot_internal_register_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_OUT_OF_MEMORY, "can't allocate memory");
+    libboot_internal_register_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_REFALLOC_NOT_FOUND, "refalloc range not found: addr=%"LIBBOOT_FMT_ADDR" size=%"LIBBOOT_FMT_UINTN);
+    libboot_internal_register_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_REFALLOC_INVALID, "refalloc range addr=%"LIBBOOT_FMT_ADDR" size=%"LIBBOOT_FMT_UINTN" exceeds allocation %"LIBBOOT_FMT_ADDR" size=%"LIBBOOT_FMT_UINTN);
+    libboot_internal_register_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_MEMIO_READ_ERROR, "MEMIO: %"LIBBOOT_FMT_UINTN"+%"LIBBOOT_FMT_UINTN" is bigger than %"LIBBOOT_FMT_UINTN);
+    libboot_internal_register_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_IO_READ, "can't read from IO: %"LIBBOOT_FMT_INT);
+    libboot_internal_register_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_IDENTIFY_NO_MATCH, "unknown image type");
+    libboot_internal_register_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_LOAD_NOT_IDENTIFIED, "can't load unidentified context");
+    libboot_internal_register_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_LOAD_NO_IO, "can't load context without IO");
+    libboot_internal_register_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_LOAD_MODULE_ERROR, "loader(%"LIBBOOT_FMT_INT") returned %"LIBBOOT_FMT_INT);
+    libboot_internal_register_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_LOAD_NO_MATCH, "can't find loader for type %"LIBBOOT_FMT_INT);
+    libboot_internal_register_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_IDENTIFYTAGS_NO_MATCH, "can't find identify tags");
+    libboot_internal_register_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_GENTAGS_MODULE_ERROR, "tagloader(%"LIBBOOT_FMT_INT") returned %"LIBBOOT_FMT_INT);
+    libboot_internal_register_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_GENTAGS_NO_MATCH, "can't find tagloader for type %"LIBBOOT_FMT_INT);
+
+    libboot_internal_register_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_PREPARE_INVALID_TYPE, "can't prepare with tags of type %"LIBBOOT_FMT_INT);
+    libboot_internal_register_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_PREPARE_NO_KERNEL_MEMORY, "can't allocate kernel boot memory at %"LIBBOOT_FMT_ADDR" size %"LIBBOOT_FMT_INT);
+    libboot_internal_register_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_PREPARE_NO_RAMDISK_MEMORY, "can't allocate ramdisk boot memory at %"LIBBOOT_FMT_ADDR" size %"LIBBOOT_FMT_INT);
+    libboot_internal_register_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_PREPARE_NO_TAGS_MEMORY, "can't allocate tags boot memory at %"LIBBOOT_FMT_ADDR" size %"LIBBOOT_FMT_INT);
 
     return 0;
 }
@@ -448,11 +480,15 @@ int libboot_load_partial(bootimg_context_t *context, boot_uintn_t type, boot_uin
     int matched;
 
     // the image wasn't identified correctly
-    if (context->type==BOOTIMG_TYPE_UNKNOWN)
+    if (context->type==BOOTIMG_TYPE_UNKNOWN) {
+        libboot_format_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_LOAD_NOT_IDENTIFIED);
         return -1;
+    }
 
-    if (!context->io)
+    if (!context->io) {
+        libboot_format_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_LOAD_NO_IO);
         return -1;
+    }
 
     while (context->type!=BOOTIMG_TYPE_RAW) {
         matched = 0;
@@ -464,7 +500,10 @@ int libboot_load_partial(bootimg_context_t *context, boot_uintn_t type, boot_uin
                 rc = mod->load(context, type, recursive);
 
                 // abort on error
-                if (rc) return rc;
+                if (rc) {
+                    libboot_format_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_LOAD_MODULE_ERROR, mod->type, rc);
+                    return rc;
+                }
 
                 // start over
                 matched = 1;
@@ -474,6 +513,7 @@ int libboot_load_partial(bootimg_context_t *context, boot_uintn_t type, boot_uin
 
         // abort
         if (!matched) {
+            libboot_format_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_LOAD_NO_MATCH, context->type);
             rc = -1;
             break;
         }
@@ -559,6 +599,12 @@ static int libboot_identify_tags(bootimg_context_t *context)
         }
     }
 
+    // no match
+    if(type==LIBBOOT_TAGS_TYPE_UNKNOWN) {
+        libboot_format_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_IDENTIFYTAGS_NO_MATCH);
+        return -1;
+    }
+
     // set type
     context->tags_type = type;
 
@@ -596,7 +642,10 @@ static int libboot_generate_tags(bootimg_context_t *context)
                 rc = mod->patch(context);
 
                 // abort on error
-                if (rc) return rc;
+                if (rc) {
+                    libboot_format_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_GENTAGS_MODULE_ERROR, type, rc);
+                    return rc;
+                }
 
                 // start over
                 matched = 1;
@@ -609,8 +658,10 @@ static int libboot_generate_tags(bootimg_context_t *context)
     }
 
     // no tags were loaded
-    if (!matched || !context->tags_data)
+    if (!matched || !context->tags_data || !context->tags_ready) {
+        libboot_format_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_GENTAGS_NO_MATCH, context->type);
         rc = -1;
+    }
 
     return rc;
 }
@@ -620,8 +671,10 @@ int libboot_prepare(bootimg_context_t *context)
     int rc;
 
     // the image wasn't loaded correctly
-    if (context->type!=BOOTIMG_TYPE_RAW)
+    if (context->type!=BOOTIMG_TYPE_RAW) {
+        libboot_format_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_PREPARE_INVALID_TYPE, context->type);
         return -1;
+    }
 
     context->kernel_arguments[0] = 0;
     context->kernel_arguments[1] = 0;
@@ -635,16 +688,28 @@ int libboot_prepare(bootimg_context_t *context)
 
     // allocate loading addresses
     if (context->kernel_addr && context->kernel_size) {
-        context->kernel_addr = (boot_uintn_t)libboot_platform_bootalloc(context->kernel_addr, context->kernel_size);
-        if (!context->kernel_addr) return -1;
+        boot_uintn_t naddr = (boot_uintn_t)libboot_platform_bootalloc(context->kernel_addr, context->kernel_size);
+        if (!naddr) {
+            libboot_format_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_PREPARE_NO_KERNEL_MEMORY, context->kernel_addr, context->kernel_size);
+            return -1;
+        }
+        context->kernel_addr = naddr;
     }
     if (context->ramdisk_addr && context->ramdisk_size) {
-        context->ramdisk_addr = (boot_uintn_t)libboot_platform_bootalloc(context->ramdisk_addr, context->ramdisk_size);
-        if (!context->ramdisk_addr) return -1;
+        boot_uintn_t naddr = (boot_uintn_t)libboot_platform_bootalloc(context->ramdisk_addr, context->ramdisk_size);
+        if (!naddr) {
+            libboot_format_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_PREPARE_NO_RAMDISK_MEMORY, context->ramdisk_addr, context->ramdisk_size);
+            return -1;
+        }
+        context->ramdisk_addr = naddr;
     }
     if (context->tags_addr && context->tags_size) {
-        context->tags_addr = (boot_uintn_t)libboot_platform_bootalloc(context->tags_addr, context->tags_size);
-        if (!context->tags_addr) return -1;
+        boot_uintn_t naddr = (boot_uintn_t)libboot_platform_bootalloc(context->tags_addr, context->tags_size);
+        if (!naddr) {
+            libboot_format_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_PREPARE_NO_TAGS_MEMORY, context->tags_addr, context->tags_size);
+            return -1;
+        }
+        context->tags_addr = naddr;
     }
 
     // load images to final addresses
