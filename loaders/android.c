@@ -41,11 +41,6 @@ static int ldrmodule_load(bootimg_context_t *context, boot_uintn_t type, boot_ui
         goto out;
     }
 
-    if (hdr->kernel_size==0) {
-        libboot_format_error(LIBBOOT_ERROR_GROUP_ANDROID, LIBBOOT_ERROR_ANDROID_ZERO_KERNEL);
-        goto out;
-    }
-
     // calculate offsets
     boot_uintn_t off_kernel  = hdr->page_size;
     boot_uintn_t off_ramdisk = off_kernel  + ALIGN(hdr->kernel_size,  hdr->page_size);
@@ -55,22 +50,23 @@ static int ldrmodule_load(bootimg_context_t *context, boot_uintn_t type, boot_ui
     // load kernel
     if (type&LIBBOOT_LOAD_TYPE_KERNEL) {
         kernel_size = hdr->kernel_size;
+        if(kernel_size>0) {
+            // refalloc
+            if (context->io->is_memio && context->io->pdata_is_allocated) {
+                kernel_data = libboot_refalloc(context->io->pdata + off_kernel, kernel_size);
+                if (!kernel_data) goto err_free;
+            }
 
-        // refalloc
-        if (context->io->is_memio && context->io->pdata_is_allocated) {
-            kernel_data = libboot_refalloc(context->io->pdata + off_kernel, kernel_size);
-            if (!kernel_data) goto err_free;
-        }
+            // read from IO
+            else {
+                kernel_data = libboot_internal_io_alloc(context->io, kernel_size);
+                if (!kernel_data) goto err_free;
 
-        // read from IO
-        else {
-            kernel_data = libboot_internal_io_alloc(context->io, kernel_size);
-            if (!kernel_data) goto err_free;
-
-            rc = libboot_internal_io_read(context->io, kernel_data, off_kernel, kernel_size, &kernel_data);
-            if (rc<0) {
-                libboot_format_error(LIBBOOT_ERROR_GROUP_ANDROID, LIBBOOT_ERROR_ANDROID_READ_KERNEL, rc);
-                goto err_free;
+                rc = libboot_internal_io_read(context->io, kernel_data, off_kernel, kernel_size, &kernel_data);
+                if (rc<0) {
+                    libboot_format_error(LIBBOOT_ERROR_GROUP_ANDROID, LIBBOOT_ERROR_ANDROID_READ_KERNEL, rc);
+                    goto err_free;
+                }
             }
         }
     }
@@ -133,20 +129,22 @@ static int ldrmodule_load(bootimg_context_t *context, boot_uintn_t type, boot_ui
 
     // set data
     if (type&LIBBOOT_LOAD_TYPE_KERNEL) {
-        // re-identify with kernel as image
-        rc = libboot_identify_memory(kernel_data, kernel_size, context);
-        if (rc) {
-            goto err_free;
-        }
+        if(kernel_size > 0) {
+            // re-identify with kernel as image
+            rc = libboot_identify_memory(kernel_data, kernel_size, context);
+            if (rc) {
+                goto err_free;
+            }
 
-        // the data is used by context->io now, so refalloc it
-        if (!libboot_refalloc(kernel_data, kernel_size)) {
-            goto err_free;
-        }
-        context->io->pdata_is_allocated = 1;
+            // the data is used by context->io now, so refalloc it
+            if (!libboot_refalloc(kernel_data, kernel_size)) {
+                goto err_free;
+            }
+            context->io->pdata_is_allocated = 1;
 
-        // we assume that this always holds a linux image, if not it doesn't hurt to generate (unused) tags
-        context->kernel_is_linux = 1;
+            // we assume that this always holds a linux image, if not it doesn't hurt to generate (unused) tags
+            context->kernel_is_linux = 1;
+        }
 
         libboot_free(context->kernel_data);
         context->kernel_data = kernel_data;
