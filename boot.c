@@ -518,7 +518,14 @@ int libboot_load_partial(bootimg_context_t *context, boot_uintn_t type, boot_uin
             break;
         }
 
+        // don't try to use the kernel as a root container
         if (!recursive) break;
+
+        // we didn't want to load a kernel
+        if (!(type&LIBBOOT_LOAD_TYPE_KERNEL)) break;
+
+        // no kernel was loaded
+        if (!context->kernel_data) break;
     }
 
     return rc;
