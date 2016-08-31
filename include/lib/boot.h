@@ -180,7 +180,7 @@ int libboot_prepare(bootimg_context_t *context);
 // cmdline
 void libboot_cmdline_init(libboot_list_node_t *list);
 void libboot_cmdline_free(libboot_list_node_t *list);
-void libboot_cmdline_addall(libboot_list_node_t *list, char *cmdline, int overwrite);
+void libboot_cmdline_addall(libboot_list_node_t *list, const char *cmdline, int overwrite);
 void libboot_cmdline_add(libboot_list_node_t *list, const char *name, const char *value, int overwrite);
 int libboot_cmdline_has(libboot_list_node_t *list, const char *name);
 const char *libboot_cmdline_get(libboot_list_node_t *list, const char *name);

@@ -151,10 +151,13 @@ static int str2nameval(const char *str, char **name, char **value)
     return 0;
 }
 
-void libboot_cmdline_addall(libboot_list_node_t *list, char *cmdline, int overwrite)
+void libboot_cmdline_addall(libboot_list_node_t *list, const char *_cmdline, int overwrite)
 {
     const char *sep = " ";
     char *saveptr = NULL;
+
+    char* cmdline = libboot_platform_strdup(_cmdline);
+    if (!cmdline) return;
 
     char *pch = libboot_platform_strtok_r(cmdline, sep, &saveptr);
     while (pch != NULL) {
@@ -173,6 +176,8 @@ void libboot_cmdline_addall(libboot_list_node_t *list, char *cmdline, int overwr
         // next
         pch = libboot_platform_strtok_r(NULL, sep, &saveptr);
     }
+
+    libboot_free(cmdline);
 }
 
 void libboot_cmdline_init(libboot_list_node_t *list)
