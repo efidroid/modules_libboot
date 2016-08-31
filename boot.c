@@ -186,6 +186,9 @@ void libboot_free(void *ptr)
             return;
         }
     }
+
+    // we don't track externally allocated data e.g. from strdup, so just free unknown pointers
+    libboot_platform_free(ptr);
 }
 
 void *libboot_internal_io_alloc(boot_io_t *io, boot_uintn_t sz)
