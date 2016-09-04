@@ -75,6 +75,7 @@ typedef enum {
     LIBBOOT_ERROR_GROUP_UNKNOWN = -1,
     LIBBOOT_ERROR_GROUP_COMMON,
     LIBBOOT_ERROR_GROUP_ANDROID,
+    LIBBOOT_ERROR_GROUP_ELF,
 } libboot_error_group_t;
 
 typedef enum {
@@ -110,6 +111,11 @@ typedef enum {
     LIBBOOT_ERROR_ANDROID_READ_TAGS,
     LIBBOOT_ERROR_ANDROID_ALLOC_CMDLINE,
 } libboot_error_android_t;
+
+typedef enum {
+    LIBBOOT_ERROR_ELF_UNKNOWN = -1,
+    LIBBOOT_ERROR_ELF_NO_CMDLINE,
+} libboot_error_elf_t;
 
 char **libboot_error_stack_get(void);
 boot_uintn_t libboot_error_stack_count(void);
