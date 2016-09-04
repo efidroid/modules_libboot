@@ -115,6 +115,7 @@ typedef enum {
 typedef enum {
     LIBBOOT_ERROR_ELF_UNKNOWN = -1,
     LIBBOOT_ERROR_ELF_NO_CMDLINE,
+    LIBBOOT_ERROR_ELF_UNKNOWN_IMAGE,
 } libboot_error_elf_t;
 
 char **libboot_error_stack_get(void);

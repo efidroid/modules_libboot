@@ -127,6 +127,7 @@ static int ldrmodule_load(bootimg_context_t *context, boot_uintn_t type, boot_ui
             context->tags_addr = phent.p_paddr;
         }
         else {
+            libboot_format_error(LIBBOOT_ERROR_GROUP_ELF, LIBBOOT_ERROR_ELF_UNKNOWN_IMAGE);
             libboot_free(data);
             goto out;
         }

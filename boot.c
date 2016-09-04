@@ -437,6 +437,7 @@ int libboot_init(void)
     libboot_internal_register_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_PREPARE_NO_TAGS_MEMORY, "can't allocate tags boot memory at %"LIBBOOT_FMT_ADDR" size %"LIBBOOT_FMT_INT);
 
     libboot_internal_register_error(LIBBOOT_ERROR_GROUP_ELF, LIBBOOT_ERROR_ELF_NO_CMDLINE, "can't find cmdline");
+    libboot_internal_register_error(LIBBOOT_ERROR_GROUP_ELF, LIBBOOT_ERROR_ELF_UNKNOWN_IMAGE, "unknown image in program header");
 
     return 0;
 }
