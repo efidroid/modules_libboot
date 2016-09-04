@@ -501,6 +501,7 @@ int libboot_load_partial(bootimg_context_t *context, boot_uintn_t type, boot_uin
     while (context->type!=BOOTIMG_TYPE_RAW) {
         matched = 0;
 
+        bootimg_type_t oldtype = context->type;
         ldrmodule_t *mod;
         libboot_list_for_every_entry(&ldrmodules, mod, ldrmodule_t, node) {
             if (mod->load && mod->type==context->type) {
@@ -534,6 +535,12 @@ int libboot_load_partial(bootimg_context_t *context, boot_uintn_t type, boot_uin
 
         // no kernel was loaded
         if (!context->kernel_data) break;
+
+        // this is probably a loader bug
+        if (context->type==oldtype) {
+            rc = -1;
+            break;
+        }
     }
 
     return rc;
