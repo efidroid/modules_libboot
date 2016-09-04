@@ -170,6 +170,10 @@ static int ldrmodule_load(bootimg_context_t *context, boot_uintn_t type, boot_ui
         rc = libboot_internal_io_read(context->io, cmdline, shent.sh_offset, shent.sh_size, (void **)&cmdline);
         if (rc<0) goto out;
 
+        // there are two uint32_t values in front of the cmdline:
+        // 0x1 and the tags_offset
+        cmdline += 8;
+
         // add cmdline
         libboot_cmdline_addall(&context->cmdline, cmdline, 1);
 
