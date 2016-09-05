@@ -1,25 +1,25 @@
 #ifndef _LINUX_ELF_H
 #define _LINUX_ELF_H
 
-#include <linux/types.h>
-#include <linux/elf-em.h>
+#include <lib/boot/boot_platform.h>
+#include <elf-em.h>
 
 /* 32-bit ELF base types. */
-typedef __u32	Elf32_Addr;
-typedef __u16	Elf32_Half;
-typedef __u32	Elf32_Off;
-typedef __s32	Elf32_Sword;
-typedef __u32	Elf32_Word;
+typedef boot_uint32_t	Elf32_Addr;
+typedef boot_uint16_t	Elf32_Half;
+typedef boot_uint32_t	Elf32_Off;
+typedef boot_int32_t	Elf32_Sword;
+typedef boot_uint32_t	Elf32_Word;
 
 /* 64-bit ELF base types. */
-typedef __u64	Elf64_Addr;
-typedef __u16	Elf64_Half;
-typedef __s16	Elf64_SHalf;
-typedef __u64	Elf64_Off;
-typedef __s32	Elf64_Sword;
-typedef __u32	Elf64_Word;
-typedef __u64	Elf64_Xword;
-typedef __s64	Elf64_Sxword;
+typedef boot_uint64_t	Elf64_Addr;
+typedef boot_uint16_t	Elf64_Half;
+typedef boot_int16_t	Elf64_SHalf;
+typedef boot_uint64_t	Elf64_Off;
+typedef boot_int32_t	Elf64_Sword;
+typedef boot_uint32_t	Elf64_Word;
+typedef boot_uint64_t	Elf64_Xword;
+typedef boot_int64_t	Elf64_Sxword;
 
 /* These constants are for the segment types stored in the image headers */
 #define PT_NULL    0
