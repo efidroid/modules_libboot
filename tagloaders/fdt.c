@@ -19,7 +19,7 @@
 #include <lib/boot/internal/qcdt.h>
 #include <libfdt.h>
 
-#define DTB_PAD_SIZE 1024
+#define DTB_PAD_SIZE (1*1024*1024)
 
 typedef struct {
     void *fdt;
