@@ -41,8 +41,6 @@
 #define DTB_MAGIC               0xedfe0dd0
 #define DTB_OFFSET              0x2C
 
-#define DTB_PAD_SIZE            1024
-
 /*
  * For DTB V1: The DTB entries would be of the format
  * qcom,msm-id = <msm8974, CDP, rev_1>; (3 * sizeof(boot_uint32_t))
