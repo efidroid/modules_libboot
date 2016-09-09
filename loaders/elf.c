@@ -93,10 +93,10 @@ static int ldrmodule_load(bootimg_context_t *context, boot_uintn_t type, boot_ui
     Elf64_Ehdr *hdr = NULL;
     Elf64_Phdr *phdr = NULL;
     Elf64_Shdr *shdr = NULL;
-    char* cmdline = NULL;
+    char *cmdline = NULL;
 
     hdr = elf_get_hdr(context->io, &is_32bit_elf);
-    if(!hdr) goto out;
+    if (!hdr) goto out;
 
     // allocate program header
     phdr = libboot_internal_io_alloc(context->io, hdr->e_phnum * hdr->e_phentsize);
@@ -107,10 +107,10 @@ static int ldrmodule_load(bootimg_context_t *context, boot_uintn_t type, boot_ui
     if (rc<0) goto out;
 
     // load all program files
-    for(i=0; i<hdr->e_phnum; i++) {
+    for (i=0; i<hdr->e_phnum; i++) {
         Elf64_Phdr phent;
-        void* phent_ptr = (void*)(((boot_uintn_t)phdr)+(i*hdr->e_phentsize));
-        if(is_32bit_elf) {
+        void *phent_ptr = (void *)(((boot_uintn_t)phdr)+(i*hdr->e_phentsize));
+        if (is_32bit_elf) {
             Elf32_Phdr phent32;
             libboot_platform_memmove(&phent32, phent_ptr, sizeof(phent32));
             phent.p_type = phent32.p_type;
@@ -121,25 +121,24 @@ static int ldrmodule_load(bootimg_context_t *context, boot_uintn_t type, boot_ui
             phent.p_filesz = phent32.p_filesz;
             phent.p_memsz = phent32.p_memsz;
             phent.p_align = phent32.p_align;
-        }
-        else {
+        } else {
             libboot_platform_memmove(&phent, phent_ptr, sizeof(Elf64_Phdr));
         }
 
         // we only care about loadable entries
-        if(phent.p_type!=PT_LOAD)
+        if (phent.p_type!=PT_LOAD)
             continue;
 
         // allocate
-        void* data = libboot_internal_io_alloc(context->io, phent.p_filesz);
+        void *data = libboot_internal_io_alloc(context->io, phent.p_filesz);
         if (!phdr) goto out;
 
         // read
         rc = libboot_internal_io_read(context->io, data, phent.p_offset, phent.p_filesz, (void **)&data);
         if (rc<0) goto out;
 
-        if(i==0) {
-            if(!(type&LIBBOOT_LOAD_TYPE_KERNEL)) {
+        if (i==0) {
+            if (!(type&LIBBOOT_LOAD_TYPE_KERNEL)) {
                 libboot_free(data);
                 continue;
             }
@@ -147,9 +146,8 @@ static int ldrmodule_load(bootimg_context_t *context, boot_uintn_t type, boot_ui
             context->kernel_data = data;
             context->kernel_size = phent.p_filesz;
             context->kernel_addr = phent.p_paddr;
-        }
-        else if(i==1) {
-            if(!(type&LIBBOOT_LOAD_TYPE_RAMDISK)) {
+        } else if (i==1) {
+            if (!(type&LIBBOOT_LOAD_TYPE_RAMDISK)) {
                 libboot_free(data);
                 continue;
             }
@@ -157,9 +155,8 @@ static int ldrmodule_load(bootimg_context_t *context, boot_uintn_t type, boot_ui
             context->ramdisk_data = data;
             context->ramdisk_size = phent.p_filesz;
             context->ramdisk_addr = phent.p_paddr;
-        }
-        else if(i==2) {
-            if(!(type&LIBBOOT_LOAD_TYPE_TAGS)) {
+        } else if (i==2) {
+            if (!(type&LIBBOOT_LOAD_TYPE_TAGS)) {
                 libboot_free(data);
                 continue;
             }
@@ -167,8 +164,7 @@ static int ldrmodule_load(bootimg_context_t *context, boot_uintn_t type, boot_ui
             context->tags_data = data;
             context->tags_size = phent.p_filesz;
             context->tags_addr = phent.p_paddr;
-        }
-        else {
+        } else {
             libboot_format_error(LIBBOOT_ERROR_GROUP_ELF, LIBBOOT_ERROR_ELF_UNKNOWN_IMAGE);
             libboot_free(data);
             goto out;
@@ -184,10 +180,10 @@ static int ldrmodule_load(bootimg_context_t *context, boot_uintn_t type, boot_ui
     if (rc<0) goto out;
 
     boot_uint8_t found_cmdline = 0;
-    for(i=0; i<hdr->e_shnum; i++) {
+    for (i=0; i<hdr->e_shnum; i++) {
         Elf64_Shdr shent;
-        void* shent_ptr = (void*)(((boot_uintn_t)shdr)+(i*hdr->e_shentsize));
-        if(is_32bit_elf) {
+        void *shent_ptr = (void *)(((boot_uintn_t)shdr)+(i*hdr->e_shentsize));
+        if (is_32bit_elf) {
             Elf32_Shdr shent32;
             libboot_platform_memmove(&shent32, shent_ptr, sizeof(shent32));
             shent.sh_name = shent32.sh_name;
@@ -200,8 +196,7 @@ static int ldrmodule_load(bootimg_context_t *context, boot_uintn_t type, boot_ui
             shent.sh_info = shent32.sh_info;
             shent.sh_addralign = shent32.sh_addralign;
             shent.sh_entsize = shent32.sh_entsize;
-        }
-        else {
+        } else {
             libboot_platform_memmove(&shent, shent_ptr, sizeof(Elf64_Shdr));
         }
 
@@ -229,7 +224,7 @@ static int ldrmodule_load(bootimg_context_t *context, boot_uintn_t type, boot_ui
         break;
     }
 
-    if(!found_cmdline) {
+    if (!found_cmdline) {
         libboot_format_error(LIBBOOT_ERROR_GROUP_ELF, LIBBOOT_ERROR_ELF_NO_CMDLINE);
         goto out;
     }
