@@ -62,11 +62,14 @@ out:
     return NULL;
 }
 
-static int ldrmodule_magictest(boot_io_t *io)
+static int ldrmodule_magictest(boot_io_t *io, boot_uint32_t *checksum)
 {
     int ret = -1;
+    int rc;
     int is_32bit_elf;
     Elf64_Ehdr *hdr = NULL;
+    void *phdr = NULL;
+    void *ckdata = NULL;
 
     hdr = elf_get_hdr(io, &is_32bit_elf);
     if (!hdr) goto out;
@@ -78,7 +81,32 @@ static int ldrmodule_magictest(boot_io_t *io)
         ret = 1;
     }
 
+    if (checksum) {
+        boot_uintn_t phdrsz = hdr->e_phnum * hdr->e_phentsize;
+
+        // allocate program header
+        phdr = libboot_internal_io_alloc(io, phdrsz);
+        if (!phdr) goto out;
+
+        // read program headers
+        rc = libboot_internal_io_read(io, phdr, hdr->e_phoff, hdr->e_phnum * hdr->e_phentsize, (void **)&phdr);
+        if (rc<0) goto out;
+
+        // allocate buffer
+        ckdata = libboot_alloc(sizeof(*hdr)+phdrsz);
+        if (!ckdata) goto out;
+
+        // move related data into buffer
+        libboot_platform_memmove(ckdata, hdr, sizeof(*hdr));
+        libboot_platform_memmove(ckdata+sizeof(*hdr), phdr, phdrsz);
+
+        // calculate  checksum
+        *checksum = libboot_crc32(0, (void *)ckdata, sizeof(*hdr)+phdrsz);
+    }
+
 out:
+    libboot_free(ckdata);
+    libboot_free(phdr);
     libboot_free(hdr);
 
     return ret;

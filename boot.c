@@ -237,9 +237,11 @@ int libboot_identify(boot_io_t *io, bootimg_context_t *context)
 
     ldrmodule_t *mod;
     libboot_list_for_every_entry(&ldrmodules, mod, ldrmodule_t, node) {
+        boot_uint32_t checksum = 0;
+
         // custom test
         if (mod->magic_custom_test) {
-            magic_test_result = mod->magic_custom_test(io);
+            magic_test_result = mod->magic_custom_test(io, context->rootio?NULL:&checksum);
             if (magic_test_result>=0) {
                 type = mod->type;
             }
@@ -268,10 +270,7 @@ do_free:
                 if (!rootio) return -1;
                 context->rootio = rootio;
                 context->outer_type = type;
-
-                // generate a checksum
-                if (mod->checksum)
-                    context->checksum = mod->checksum(io);
+                context->checksum = checksum;
             }
 
             // replace current kernel-IO

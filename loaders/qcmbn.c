@@ -30,19 +30,27 @@ typedef struct {
     boot_uint32_t cert_chain_size;
 } qcom_bootimg_t;
 
-static int ldrmodule_magictest(boot_io_t *io)
+static int ldrmodule_magictest(boot_io_t *io, boot_uint32_t *checksum)
 {
     int rc;
     int ret = -1;
 
+    // allocate header
     qcom_bootimg_t *hdr = libboot_internal_io_alloc(io, sizeof(qcom_bootimg_t));
     if (!hdr) return ret;
 
+    // read header
     rc = libboot_internal_io_read(io, hdr, 0, sizeof(*hdr), (void **)&hdr);
     if (rc<0) goto out;
 
+    // verify identity
     if (hdr->image_size>0 && hdr->image_size==hdr->code_size+hdr->signature_size+hdr->cert_chain_size) {
         ret = 0;
+
+        // calculate checksum
+        if (checksum) {
+            *checksum = libboot_crc32(0, (void *)hdr, sizeof(*hdr));
+        }
     }
 
 out:
@@ -110,34 +118,11 @@ out:
     return ret;
 }
 
-static boot_uint32_t ldrmodule_checksum(boot_io_t *io)
-{
-    int rc;
-    boot_uint32_t ret = 0;
-
-    // allocate header
-    qcom_bootimg_t *hdr = libboot_internal_io_alloc(io, sizeof(qcom_bootimg_t));
-    if (!hdr) goto out;
-
-    // read header
-    rc = libboot_internal_io_read(io, hdr, 0, sizeof(*hdr), (void **)&hdr);
-    if (rc<0) goto out;
-
-    // calculate checksum
-    ret = libboot_crc32(0, (void *)hdr, sizeof(*hdr));
-
-out:
-    libboot_free(hdr);
-
-    return ret;
-}
-
 static ldrmodule_t ldrmodule = {
     .type = BOOTIMG_TYPE_QCMBN,
     .magic_custom_test = ldrmodule_magictest,
 
     .load = ldrmodule_load,
-    .checksum = ldrmodule_checksum,
 };
 
 int libboot_internal_ldrmodule_qcmbn_init(void)

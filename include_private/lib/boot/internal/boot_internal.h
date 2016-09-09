@@ -43,9 +43,8 @@
 #define IO_ALIGN(io, sz) ALIGN(sz, (io)->blksz)
 
 // LOADERS
-typedef int (*ldrmodule_magictest_t)(boot_io_t *io);
+typedef int (*ldrmodule_magictest_t)(boot_io_t *io, boot_uint32_t *checksum);
 typedef int (*ldrmodule_load_t)(bootimg_context_t *context, boot_uintn_t type, boot_uint8_t recursive);
-typedef boot_uint32_t (*ldrmodule_checksum_t)(boot_io_t *io);
 
 typedef struct {
     libboot_list_node_t node;
@@ -58,9 +57,6 @@ typedef struct {
     boot_uintn_t magic_off;
     boot_uintn_t magic_sz;
     const void *magic_val;
-
-    // checksum
-    ldrmodule_checksum_t checksum;
 
     // loading
     ldrmodule_load_t load;

@@ -179,19 +179,29 @@ out:
     return ret;
 }
 
-static boot_uint32_t ldrmodule_checksum(boot_io_t *io)
+static int ldrmodule_magictest(boot_io_t *io, boot_uint32_t *checksum)
 {
     int rc;
-    boot_uint32_t ret = 0;
+    int ret = -1;
 
+    // allocate header
     boot_img_hdr *hdr = libboot_internal_io_alloc(io, sizeof(boot_img_hdr));
     if (!hdr) goto out;
 
+    // read header
     rc = libboot_internal_io_read(io, hdr, 0, sizeof(*hdr), (void **)&hdr);
     if (rc<0) goto out;
 
+    // check magic
+    if (libboot_platform_memcmp(hdr->magic, BOOT_MAGIC, BOOT_MAGIC_SIZE))
+        goto out;
+
     // calculate checksum
-    ret = libboot_crc32(0, (void *)hdr, sizeof(boot_img_hdr));
+    if (checksum) {
+        *checksum = libboot_crc32(0, (void *)hdr, sizeof(boot_img_hdr));
+    }
+
+    ret = 0;
 
 out:
     libboot_free(hdr);
@@ -201,13 +211,9 @@ out:
 
 static ldrmodule_t ldrmodule = {
     .type = BOOTIMG_TYPE_ANDROID,
-    .magic_custom_test = NULL,
-    .magic_off = 0,
-    .magic_sz = BOOT_MAGIC_SIZE,
-    .magic_val = BOOT_MAGIC,
+    .magic_custom_test = ldrmodule_magictest,
 
     .load = ldrmodule_load,
-    .checksum = ldrmodule_checksum,
 };
 
 int libboot_internal_ldrmodule_android_init(void)
