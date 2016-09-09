@@ -206,7 +206,7 @@ boot_intn_t libboot_internal_io_read(boot_io_t *io, void *buf, boot_uintn_t off,
     boot_uintn_t readsize_aligned = IO_ALIGN(io, readsize);
 
     boot_intn_t rc = io->read(io, buf, off_aligned/io->blksz, readsize_aligned/io->blksz);
-    if (rc<=alignment_off) {
+    if (rc<=0 || (boot_uintn_t)rc<=alignment_off) {
         libboot_format_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_IO_READ, rc);
         return rc;
     }
