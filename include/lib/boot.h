@@ -136,6 +136,7 @@ struct bootimg_context {
     boot_io_t *rootio;
     boot_io_t *io;
     boot_uint32_t checksum;
+    int magic_test_result;
 
     // load: kernel
     boot_uintn_t kernel_size;

@@ -233,13 +233,16 @@ int libboot_identify(boot_io_t *io, bootimg_context_t *context)
 {
     bootimg_type_t type = BOOTIMG_TYPE_UNKNOWN;
     int rc = 0;
+    int magic_test_result = 0;
 
     ldrmodule_t *mod;
     libboot_list_for_every_entry(&ldrmodules, mod, ldrmodule_t, node) {
         // custom test
         if (mod->magic_custom_test) {
-            if (mod->magic_custom_test(io)==0)
+            magic_test_result = mod->magic_custom_test(io);
+            if (magic_test_result>=0) {
                 type = mod->type;
+            }
         }
 
         // automatic test
@@ -275,6 +278,7 @@ do_free:
             libboot_internal_io_destroy(context->io);
             context->io = io;
             context->type = type;
+            context->magic_test_result = magic_test_result;
 
             rc = 0;
             break;
