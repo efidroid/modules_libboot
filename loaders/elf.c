@@ -19,26 +19,25 @@
 #include <lib/boot.h>
 #include <lib/boot/internal/boot_internal.h>
 
-static int ldrmodule_load(bootimg_context_t *context, boot_uintn_t type, boot_uint8_t recursive)
+static Elf64_Ehdr *elf_get_hdr(boot_io_t *io, int *is_32bit_elf)
 {
     int rc;
-    int ret = -1;
-    boot_uintn_t i;
     Elf64_Ehdr *hdr = NULL;
-    Elf64_Phdr *phdr = NULL;
-    Elf64_Shdr *shdr = NULL;
-    char* cmdline = NULL;
 
     // allocate elf header
-    hdr = libboot_internal_io_alloc(context->io, sizeof(*hdr));
+    hdr = libboot_internal_io_alloc(io, sizeof(*hdr));
     if (!hdr) goto out;
 
     // read elf header
-    rc = libboot_internal_io_read(context->io, hdr, 0, sizeof(*hdr), (void **)&hdr);
+    rc = libboot_internal_io_read(io, hdr, 0, sizeof(*hdr), (void **)&hdr);
     if (rc<0) goto out;
 
-    int is_32bit_elf = (hdr->e_ident[EI_CLASS] != ELFCLASS64);
-    if(is_32bit_elf) {
+    // check magic
+    if (libboot_platform_memcmp(&hdr->e_ident[EI_MAG0], ELFMAG, SELFMAG))
+        goto out;
+
+    *is_32bit_elf = (hdr->e_ident[EI_CLASS] != ELFCLASS64);
+    if (*is_32bit_elf) {
         Elf32_Ehdr hdr32;
         libboot_platform_memmove(&hdr32, hdr, sizeof(hdr32));
         hdr->e_type = hdr32.e_type;
@@ -55,6 +54,49 @@ static int ldrmodule_load(bootimg_context_t *context, boot_uintn_t type, boot_ui
         hdr->e_shnum = hdr32.e_shnum;
         hdr->e_shstrndx = hdr32.e_shstrndx;
     }
+
+    return hdr;
+
+out:
+    libboot_free(hdr);
+    return NULL;
+}
+
+static int ldrmodule_magictest(boot_io_t *io)
+{
+    int ret = -1;
+    int is_32bit_elf;
+    Elf64_Ehdr *hdr = NULL;
+
+    hdr = elf_get_hdr(io, &is_32bit_elf);
+    if (!hdr) goto out;
+
+    if (hdr->e_flags==0) {
+        ret = 0;
+    } else {
+        // this is an internal elf boot image
+        ret = 1;
+    }
+
+out:
+    libboot_free(hdr);
+
+    return ret;
+}
+
+static int ldrmodule_load(bootimg_context_t *context, boot_uintn_t type, boot_uint8_t recursive)
+{
+    int rc;
+    int ret = -1;
+    boot_uintn_t i;
+    int is_32bit_elf;
+    Elf64_Ehdr *hdr = NULL;
+    Elf64_Phdr *phdr = NULL;
+    Elf64_Shdr *shdr = NULL;
+    char* cmdline = NULL;
+
+    hdr = elf_get_hdr(context->io, &is_32bit_elf);
+    if(!hdr) goto out;
 
     // allocate program header
     phdr = libboot_internal_io_alloc(context->io, hdr->e_phnum * hdr->e_phentsize);
@@ -207,7 +249,7 @@ out:
 
 static ldrmodule_t ldrmodule = {
     .type = BOOTIMG_TYPE_ELF,
-    .magic_custom_test = NULL,
+    .magic_custom_test = ldrmodule_magictest,
     .magic_off = 0,
     .magic_sz = 4,
     .magic_val = ELFMAG,
