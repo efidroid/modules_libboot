@@ -50,7 +50,7 @@ static int ldrmodule_load(bootimg_context_t *context, boot_uintn_t type, boot_ui
     // load kernel
     if (type&LIBBOOT_LOAD_TYPE_KERNEL) {
         kernel_size = hdr->kernel_size;
-        if(kernel_size>0) {
+        if (kernel_size>0) {
             // refalloc
             if (context->io->is_memio && context->io->pdata_is_allocated) {
                 kernel_data = libboot_refalloc(context->io->pdata + off_kernel, kernel_size);
@@ -129,7 +129,7 @@ static int ldrmodule_load(bootimg_context_t *context, boot_uintn_t type, boot_ui
 
     // set data
     if (type&LIBBOOT_LOAD_TYPE_KERNEL) {
-        if(kernel_size > 0) {
+        if (kernel_size > 0) {
             // re-identify with kernel as image
             rc = libboot_identify_memory(kernel_data, kernel_size, context);
             if (rc) {
