@@ -154,7 +154,6 @@ static int fdtloader_add_meminfo(void *fdt)
     return 0;
 }
 
-#ifndef DISABLE_QCOM_FEATURES
 static boot_uintn_t fdtloader_fdt_count(void *fdt, boot_uintn_t size)
 {
     boot_uintn_t i = 0;
@@ -196,7 +195,6 @@ int fdtloader_process_multifdt(bootimg_context_t *context)
 
     return 0;
 }
-#endif
 
 static int tagmodule_patch(bootimg_context_t *context)
 {
@@ -214,13 +212,11 @@ static int tagmodule_patch(bootimg_context_t *context)
         context->tags_type = LIBBOOT_TAGS_TYPE_FDT;
     }
 
-#ifndef DISABLE_QCOM_FEATURES
     // process multi fdt in case this is one
     if (fdtloader_fdt_count(context->tags_data, context->tags_size)>1) {
         rc = fdtloader_process_multifdt(context);
         if (rc) goto out;
     }
-#endif
 
     // check fdt header
     rc = fdt_check_header(context->tags_data);

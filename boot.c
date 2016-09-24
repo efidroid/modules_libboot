@@ -403,16 +403,12 @@ int libboot_init(void)
     libboot_internal_ldrmodule_efi_init();
     libboot_internal_ldrmodule_elf_init();
     libboot_internal_ldrmodule_zimage_init();
-#ifndef DISABLE_QCOM_FEATURES
     libboot_internal_ldrmodule_qcmbn_init();
-#endif
     libboot_internal_ldrmodule_gzip_init();
 
     // tag modules
     libboot_list_initialize(&tagmodules);
-#ifndef DISABLE_QCOM_FEATURES
     libboot_internal_tagmodule_qcdt_init();
-#endif
     libboot_internal_tagmodule_fdt_init();
     libboot_internal_tagmodule_atags_init();
 
