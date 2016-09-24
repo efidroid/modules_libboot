@@ -7,23 +7,21 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -ffunction-sections -fdata-sections -Wl,-gc-
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Werror")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-parameter")
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DDISABLE_QCOM_FEATURES=1")
-
 # main
 add_library(boot
     boot.c
     cmdline.c
-    #qcdt.c
+    qcdt.c
     cksum/crc32.c
     loaders/android.c
     loaders/efi.c
     loaders/elf.c
     loaders/gzip.c
-    #loaders/qcmbn.c
+    loaders/qcmbn.c
     loaders/zimage.c
     tagloaders/atags.c
     tagloaders/fdt.c
-    #tagloaders/qcdt.c
+    tagloaders/qcdt.c
 )
 include_directories(
     include
