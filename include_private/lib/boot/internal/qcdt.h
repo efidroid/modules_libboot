@@ -83,6 +83,16 @@ typedef struct {
 } dt_entry_t;
 
 typedef struct {
+    boot_uint32_t platform_id;
+    boot_uint32_t variant_id;
+    boot_uint32_t board_hw_subtype;
+    boot_uint32_t soc_rev;
+    boot_uint32_t pmic_rev[4];
+    boot_uint32_t offset;
+    boot_uint32_t size;
+} dt_entry_local_t;
+
+typedef struct {
     boot_uint32_t magic;
     boot_uint32_t version;
     boot_uint32_t num_entries;
@@ -129,10 +139,10 @@ typedef enum {
 
 typedef struct {
     libboot_list_node_t node;
-    dt_entry_t *dt_entry_m;
+    dt_entry_local_t *dt_entry_m;
 } dt_entry_node_t;
 
 int libboot_qcdt_validate(dt_table_t *table, boot_uint32_t *dt_hdr_size);
-int libboot_qcdt_get_entry_info(dt_table_t *table, dt_entry_t *dt_entry_info);
+int libboot_qcdt_get_entry_info(dt_table_t *table, dt_entry_local_t *dt_entry_info);
 void *libboot_qcdt_appended(void *fdt, boot_uintn_t fdt_size);
 #endif // LIB_BOOT_INTERNAL_QCDT_H

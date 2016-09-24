@@ -31,14 +31,14 @@
 #include <lib/boot/internal/qcdt.h>
 #include <libfdt.h>
 
-static int devtree_entry_is_excact_match(dt_entry_t *cur_dt_entry, dt_entry_node_t *dt_list);
-static dt_entry_t *devtree_get_best_entry(dt_entry_node_t *dt_list);
+static int devtree_entry_add_if_excact_match(dt_entry_local_t *cur_dt_entry, dt_entry_node_t *dt_list);
+static dt_entry_local_t *devtree_get_best_entry(dt_entry_node_t *dt_list);
 static int devtree_delete_incompatible_entries2(dt_entry_node_t *dt_list, boot_uint32_t dtb_info);
 
 /* Add function to allocate dt entry list, used for recording
-*  the entry which conform to devtree_entry_is_excact_match()
+*  the entry which conform to devtree_entry_add_if_excact_match()
 */
-static dt_entry_node_t *dt_entry_list_init(void)
+static dt_entry_node_t *dt_entry_node_create(void)
 {
     dt_entry_node_t *dt_node_member = NULL;
 
@@ -47,10 +47,10 @@ static dt_entry_node_t *dt_entry_list_init(void)
 
     libboot_list_clear_node(&dt_node_member->node);
 
-    dt_node_member->dt_entry_m = (dt_entry_t *) libboot_alloc(sizeof(dt_entry_t));
+    dt_node_member->dt_entry_m = (dt_entry_local_t *) libboot_alloc(sizeof(dt_entry_local_t));
     LIBBOOT_ASSERT(dt_node_member->dt_entry_m);
 
-    libboot_platform_memset(dt_node_member->dt_entry_m , 0, sizeof(dt_entry_t));
+    libboot_platform_memset(dt_node_member->dt_entry_m , 0, sizeof(dt_entry_local_t));
     return dt_node_member;
 }
 
@@ -90,8 +90,8 @@ static int libboot_qcdt_add_compatible_entries(void *dtb, boot_uint32_t dtb_size
     const char *board_prop = NULL;
     const char *pmic_prop = NULL;
     char *model = NULL;
-    dt_entry_t *cur_dt_entry;
-    dt_entry_t *dt_entry_array = NULL;
+    dt_entry_local_t *cur_dt_entry;
+    dt_entry_local_t *dt_entry_array = NULL;
     board_id_t *board_data = NULL;
     plat_id_t *platform_data = NULL;
     pmic_id_t *pmic_data = NULL;
@@ -163,14 +163,14 @@ static int libboot_qcdt_add_compatible_entries(void *dtb, boot_uint32_t dtb_size
      * z: SOC rev
      */
     if (dtb_ver == DEV_TREE_VERSION_V1) {
-        cur_dt_entry = (dt_entry_t *)
-                       libboot_alloc(sizeof(dt_entry_t));
+        cur_dt_entry = (dt_entry_local_t *)
+                       libboot_alloc(sizeof(dt_entry_local_t));
 
         if (!cur_dt_entry) {
             LOGE("Out of memory\n");
             return 0;
         }
-        libboot_platform_memset(cur_dt_entry, 0, sizeof(dt_entry_t));
+        libboot_platform_memset(cur_dt_entry, 0, sizeof(dt_entry_local_t));
 
         while (len_plat_id) {
             cur_dt_entry->platform_id = fdt32_to_cpu(((const dt_entry_v1_t *)plat_prop)->platform_id);
@@ -189,7 +189,7 @@ static int libboot_qcdt_add_compatible_entries(void *dtb, boot_uint32_t dtb_size
                  *model ? model : "unknown",
                  cur_dt_entry->platform_id, cur_dt_entry->variant_id, cur_dt_entry->soc_rev);
 
-            if (devtree_entry_is_excact_match(cur_dt_entry, dtb_list)) {
+            if (devtree_entry_add_if_excact_match(cur_dt_entry, dtb_list)) {
                 LOGV("Device tree exact match the board: <%u %u 0x%x> == <%u %u 0x%x>\n",
                      cur_dt_entry->platform_id,
                      cur_dt_entry->variant_id,
@@ -299,7 +299,7 @@ static int libboot_qcdt_add_compatible_entries(void *dtb, boot_uint32_t dtb_size
             return 0;
         }
 
-        dt_entry_array = (dt_entry_t *) libboot_alloc(sizeof(dt_entry_t) * num_entries);
+        dt_entry_array = (dt_entry_local_t *) libboot_alloc(sizeof(dt_entry_local_t) * num_entries);
         LIBBOOT_ASSERT(dt_entry_array);
 
         /* If we have '<X>; <Y>; <Z>' as platform data & '<A>; <B>; <C>' as board data.
@@ -349,7 +349,7 @@ static int libboot_qcdt_add_compatible_entries(void *dtb, boot_uint32_t dtb_size
                  *model ? model : "unknown",
                  dt_entry_array[i].platform_id, dt_entry_array[i].variant_id, dt_entry_array[i].board_hw_subtype, dt_entry_array[i].soc_rev);
 
-            if (devtree_entry_is_excact_match(&(dt_entry_array[i]), dtb_list)) {
+            if (devtree_entry_add_if_excact_match(&(dt_entry_array[i]), dtb_list)) {
                 LOGV("Device tree exact match the board: <%u %u %u 0x%x> == <%u %u %u 0x%x>\n",
                      dt_entry_array[i].platform_id,
                      dt_entry_array[i].variant_id,
@@ -400,7 +400,7 @@ void *libboot_qcdt_appended(void *fdt, boot_uintn_t fdt_size)
     void *fdt_end = fdt + fdt_size;
     void *dtb = NULL;
     void *bestmatch_tag = NULL;
-    dt_entry_t *best_match_dt_entry = NULL;
+    dt_entry_local_t *best_match_dt_entry = NULL;
     dt_entry_node_t *dt_entry_queue = NULL;
 
 
@@ -501,7 +501,7 @@ int libboot_qcdt_validate(dt_table_t *table, boot_uint32_t *dt_hdr_size)
     return 0;
 }
 
-static int devtree_entry_is_excact_match(dt_entry_t *cur_dt_entry, dt_entry_node_t *dt_list)
+static int devtree_entry_add_if_excact_match(dt_entry_local_t *cur_dt_entry, dt_entry_node_t *dt_list)
 {
     boot_uint32_t cur_dt_hlos_ddr;
     boot_uint32_t cur_dt_hw_platform;
@@ -536,8 +536,8 @@ static int devtree_entry_is_excact_match(dt_entry_t *cur_dt_entry, dt_entry_node
             ((cur_dt_entry->pmic_rev[2] & 0x00ffff00) <= (libboot_qcdt_pmic_target(2) & 0x00ffff00)) &&
             ((cur_dt_entry->pmic_rev[3] & 0x00ffff00) <= (libboot_qcdt_pmic_target(3) & 0x00ffff00))) {
 
-        dt_node_tmp = dt_entry_list_init();
-        libboot_platform_memmove((char *)dt_node_tmp->dt_entry_m,(char *)cur_dt_entry, sizeof(dt_entry_t));
+        dt_node_tmp = dt_entry_node_create();
+        libboot_platform_memmove((char *)dt_node_tmp->dt_entry_m,(char *)cur_dt_entry, sizeof(dt_entry_local_t));
 
         LOGV("Add DTB entry %u/%08x/0x%08x/%x/%x/%x/%x/%x/%x/%x\n",
              dt_node_tmp->dt_entry_m->platform_id, dt_node_tmp->dt_entry_m->variant_id,
@@ -788,7 +788,7 @@ static int devtree_delete_incompatible_entries2(dt_entry_node_t *dt_list, boot_u
     return 1;
 }
 
-static dt_entry_t *devtree_get_best_entry(dt_entry_node_t *dt_list)
+static dt_entry_local_t *devtree_get_best_entry(dt_entry_node_t *dt_list)
 {
     dt_entry_node_t *dt_node_tmp1 = NULL;
 
@@ -862,15 +862,16 @@ static dt_entry_t *devtree_get_best_entry(dt_entry_node_t *dt_list)
  *  "dt_entry_info" out parameter and a function value of 0 is returned, otherwise
  *  a non-zero function value is returned.
  */
-int libboot_qcdt_get_entry_info(dt_table_t *table, dt_entry_t *dt_entry_info)
+int libboot_qcdt_get_entry_info(dt_table_t *table, dt_entry_local_t *dt_entry_info)
 {
     boot_uint32_t i;
     unsigned char *table_ptr = NULL;
-    dt_entry_t dt_entry_buf_1;
-    dt_entry_t *cur_dt_entry = NULL;
-    dt_entry_t *best_match_dt_entry = NULL;
+    dt_entry_local_t dt_entry_buf_1;
+    dt_entry_local_t *cur_dt_entry = NULL;
+    dt_entry_local_t *best_match_dt_entry = NULL;
     dt_entry_v1_t *dt_entry_v1 = NULL;
     dt_entry_v2_t *dt_entry_v2 = NULL;
+    dt_entry_t *dt_entry_v3 = NULL;
     dt_entry_node_t *dt_entry_queue = NULL;
     boot_uint32_t found = 0;
 
@@ -893,7 +894,7 @@ int libboot_qcdt_get_entry_info(dt_table_t *table, dt_entry_t *dt_entry_info)
     libboot_list_initialize(&dt_entry_queue->node);
     LOGI("DTB Total entry: %d, DTB version: %d\n", table->num_entries, table->version);
     for (i = 0; found == 0 && i < table->num_entries; i++) {
-        libboot_platform_memset(cur_dt_entry, 0, sizeof(dt_entry_t));
+        libboot_platform_memset(cur_dt_entry, 0, sizeof(dt_entry_local_t));
         switch (table->version) {
             case DEV_TREE_VERSION_V1:
                 dt_entry_v1 = (dt_entry_v1_t *)table_ptr;
@@ -937,8 +938,20 @@ int libboot_qcdt_get_entry_info(dt_table_t *table, dt_entry_t *dt_entry_info)
                 table_ptr += sizeof(dt_entry_v2_t);
                 break;
             case DEV_TREE_VERSION_V3:
-                libboot_platform_memmove(cur_dt_entry, (dt_entry_t *)table_ptr,
-                                         sizeof(dt_entry_t));
+                dt_entry_v3 = (dt_entry_t *)table_ptr;
+                cur_dt_entry->platform_id = dt_entry_v3->platform_id;
+                cur_dt_entry->variant_id = dt_entry_v3->variant_id;
+                cur_dt_entry->board_hw_subtype = dt_entry_v3->board_hw_subtype;
+                cur_dt_entry->soc_rev = dt_entry_v3->soc_rev;
+
+                cur_dt_entry->pmic_rev[0] = dt_entry_v3->pmic_rev[0];
+                cur_dt_entry->pmic_rev[1] = dt_entry_v3->pmic_rev[1];
+                cur_dt_entry->pmic_rev[2] = dt_entry_v3->pmic_rev[2];
+                cur_dt_entry->pmic_rev[3] = dt_entry_v3->pmic_rev[3];
+
+                cur_dt_entry->offset = dt_entry_v3->offset;
+                cur_dt_entry->size = dt_entry_v3->size;
+
                 /* For V3 version of DTBs we have platform version field as part
                  * of variant ID, in such case the subtype will be mentioned as 0x0
                  * As the qcom, board-id = <0xSSPMPmPH, 0x0>
@@ -964,7 +977,7 @@ int libboot_qcdt_get_entry_info(dt_table_t *table, dt_entry_t *dt_entry_info)
         /* DTBs must match the platform_id, platform_hw_id, platform_subtype and DDR size.
         * The satisfactory DTBs are stored in dt_entry_queue
         */
-        devtree_entry_is_excact_match(cur_dt_entry, dt_entry_queue);
+        devtree_entry_add_if_excact_match(cur_dt_entry, dt_entry_queue);
 
     }
     best_match_dt_entry = devtree_get_best_entry(dt_entry_queue);

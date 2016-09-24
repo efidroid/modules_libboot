@@ -36,7 +36,7 @@ static int tagmodule_patch(bootimg_context_t *context)
     }
 
     // get compatible dt entry offset
-    dt_entry_t dt_entry;
+    dt_entry_local_t dt_entry;
     if (libboot_qcdt_get_entry_info(table, &dt_entry) != 0) {
         return -1;
     }
