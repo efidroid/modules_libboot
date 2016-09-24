@@ -182,8 +182,8 @@ static int libboot_qcdt_add_compatible_entries(void *dtb, boot_uint32_t dtb_size
             cur_dt_entry->pmic_rev[1] = libboot_qcdt_pmic_target(1);
             cur_dt_entry->pmic_rev[2] = libboot_qcdt_pmic_target(2);
             cur_dt_entry->pmic_rev[3] = libboot_qcdt_pmic_target(3);
-            cur_dt_entry->offset = (boot_uint32_t)dtb;
-            cur_dt_entry->size = dtb_size;
+            cur_dt_entry->dtb_data = dtb;
+            cur_dt_entry->dtb_size = dtb_size;
 
             LOGV("Found an appended flattened device tree (%s - %u %u 0x%x)\n",
                  *model ? model : "unknown",
@@ -323,8 +323,8 @@ static int libboot_qcdt_add_compatible_entries(void *dtb, boot_uint32_t dtb_size
                         dt_entry_array[k].pmic_rev[1]= pmic_data[n].pmic_version[1];
                         dt_entry_array[k].pmic_rev[2]= pmic_data[n].pmic_version[2];
                         dt_entry_array[k].pmic_rev[3]= pmic_data[n].pmic_version[3];
-                        dt_entry_array[k].offset = (boot_uint32_t)dtb;
-                        dt_entry_array[k].size = dtb_size;
+                        dt_entry_array[k].dtb_data = dtb;
+                        dt_entry_array[k].dtb_size = dtb_size;
                         k++;
                     }
 
@@ -337,8 +337,8 @@ static int libboot_qcdt_add_compatible_entries(void *dtb, boot_uint32_t dtb_size
                     dt_entry_array[k].pmic_rev[1]= libboot_qcdt_pmic_target(1);
                     dt_entry_array[k].pmic_rev[2]= libboot_qcdt_pmic_target(2);
                     dt_entry_array[k].pmic_rev[3]= libboot_qcdt_pmic_target(3);
-                    dt_entry_array[k].offset = (boot_uint32_t)dtb;
-                    dt_entry_array[k].size = dtb_size;
+                    dt_entry_array[k].dtb_data = dtb;
+                    dt_entry_array[k].dtb_size = dtb_size;
                     k++;
                 }
             }
@@ -436,13 +436,13 @@ void *libboot_qcdt_appended(void *fdt, boot_uintn_t fdt_size)
 
     best_match_dt_entry = devtree_get_best_entry(dt_entry_queue);
     if (best_match_dt_entry) {
-        bestmatch_tag = (void *)best_match_dt_entry->offset;
-        LOGI("Best match DTB tags %u/%08x/0x%08x/%x/%x/%x/%x/%x/%x/%x\n",
+        bestmatch_tag = best_match_dt_entry->dtb_data;
+        LOGI("Best match DTB tags %u/%08x/0x%08x/%x/%x/%x/%x/%x/%p/%x\n",
              best_match_dt_entry->platform_id, best_match_dt_entry->variant_id,
              best_match_dt_entry->board_hw_subtype, best_match_dt_entry->soc_rev,
              best_match_dt_entry->pmic_rev[0], best_match_dt_entry->pmic_rev[1],
              best_match_dt_entry->pmic_rev[2], best_match_dt_entry->pmic_rev[3],
-             best_match_dt_entry->offset, best_match_dt_entry->size);
+             best_match_dt_entry->dtb_data, best_match_dt_entry->dtb_size);
         LOGI("Using pmic info 0x%0x/0x%x/0x%x/0x%0x for device 0x%0x/0x%x/0x%x/0x%0x\n",
              best_match_dt_entry->pmic_rev[0], best_match_dt_entry->pmic_rev[1],
              best_match_dt_entry->pmic_rev[2], best_match_dt_entry->pmic_rev[3],
@@ -539,12 +539,12 @@ static int devtree_entry_add_if_excact_match(dt_entry_local_t *cur_dt_entry, dt_
         dt_node_tmp = dt_entry_node_create();
         libboot_platform_memmove((char *)dt_node_tmp->dt_entry_m,(char *)cur_dt_entry, sizeof(dt_entry_local_t));
 
-        LOGV("Add DTB entry %u/%08x/0x%08x/%x/%x/%x/%x/%x/%x/%x\n",
+        LOGV("Add DTB entry %u/%08x/0x%08x/%x/%x/%x/%x/%x/%p/%x\n",
              dt_node_tmp->dt_entry_m->platform_id, dt_node_tmp->dt_entry_m->variant_id,
              dt_node_tmp->dt_entry_m->board_hw_subtype, dt_node_tmp->dt_entry_m->soc_rev,
              dt_node_tmp->dt_entry_m->pmic_rev[0], dt_node_tmp->dt_entry_m->pmic_rev[1],
              dt_node_tmp->dt_entry_m->pmic_rev[2], dt_node_tmp->dt_entry_m->pmic_rev[3],
-             dt_node_tmp->dt_entry_m->offset, dt_node_tmp->dt_entry_m->size);
+             dt_node_tmp->dt_entry_m->dtb_data, dt_node_tmp->dt_entry_m->dtb_size);
 
         insert_dt_entry_in_queue(dt_list, dt_node_tmp);
         return 1;
@@ -659,12 +659,12 @@ static int devtree_delete_incompatible_entries(dt_entry_node_t *dt_list, boot_ui
         }
 
         if (delete_current_dt) {
-            LOGV("Delete don't fit DTB entry %u/%08x/0x%08x/%x/%x/%x/%x/%x/%x/%x\n",
+            LOGV("Delete don't fit DTB entry %u/%08x/0x%08x/%x/%x/%x/%x/%x/%p/%x\n",
                  dt_node_tmp1->dt_entry_m->platform_id, dt_node_tmp1->dt_entry_m->variant_id,
                  dt_node_tmp1->dt_entry_m->board_hw_subtype, dt_node_tmp1->dt_entry_m->soc_rev,
                  dt_node_tmp1->dt_entry_m->pmic_rev[0], dt_node_tmp1->dt_entry_m->pmic_rev[1],
                  dt_node_tmp1->dt_entry_m->pmic_rev[2], dt_node_tmp1->dt_entry_m->pmic_rev[3],
-                 dt_node_tmp1->dt_entry_m->offset, dt_node_tmp1->dt_entry_m->size);
+                 dt_node_tmp1->dt_entry_m->dtb_data, dt_node_tmp1->dt_entry_m->dtb_size);
 
             dt_node_tmp2 = (dt_entry_node_t *) dt_node_tmp1->node.prev;
             dt_entry_list_delete(dt_node_tmp1);
@@ -729,12 +729,12 @@ static int devtree_delete_incompatible_entries2(dt_entry_node_t *dt_list, boot_u
             best_info = current_info;
         }
         if (current_info < best_info) {
-            LOGV("Delete don't fit DTB entry %u/%08x/0x%08x/%x/%x/%x/%x/%x/%x/%x\n",
+            LOGV("Delete don't fit DTB entry %u/%08x/0x%08x/%x/%x/%x/%x/%x/%p/%x\n",
                  dt_node_tmp1->dt_entry_m->platform_id, dt_node_tmp1->dt_entry_m->variant_id,
                  dt_node_tmp1->dt_entry_m->board_hw_subtype, dt_node_tmp1->dt_entry_m->soc_rev,
                  dt_node_tmp1->dt_entry_m->pmic_rev[0], dt_node_tmp1->dt_entry_m->pmic_rev[1],
                  dt_node_tmp1->dt_entry_m->pmic_rev[2], dt_node_tmp1->dt_entry_m->pmic_rev[3],
-                 dt_node_tmp1->dt_entry_m->offset, dt_node_tmp1->dt_entry_m->size);
+                 dt_node_tmp1->dt_entry_m->dtb_data, dt_node_tmp1->dt_entry_m->dtb_size);
 
             dt_node_tmp2 = (dt_entry_node_t *) dt_node_tmp1->node.prev;
             dt_entry_list_delete(dt_node_tmp1);
@@ -773,12 +773,12 @@ static int devtree_delete_incompatible_entries2(dt_entry_node_t *dt_list, boot_u
         }
 
         if (current_info != best_info) {
-            LOGV("Delete don't fit DTB entry %u/%08x/0x%08x/%x/%x/%x/%x/%x/%x/%x\n",
+            LOGV("Delete don't fit DTB entry %u/%08x/0x%08x/%x/%x/%x/%x/%x/%p/%x\n",
                  dt_node_tmp1->dt_entry_m->platform_id, dt_node_tmp1->dt_entry_m->variant_id,
                  dt_node_tmp1->dt_entry_m->board_hw_subtype, dt_node_tmp1->dt_entry_m->soc_rev,
                  dt_node_tmp1->dt_entry_m->pmic_rev[0], dt_node_tmp1->dt_entry_m->pmic_rev[1],
                  dt_node_tmp1->dt_entry_m->pmic_rev[2], dt_node_tmp1->dt_entry_m->pmic_rev[3],
-                 dt_node_tmp1->dt_entry_m->offset, dt_node_tmp1->dt_entry_m->size);
+                 dt_node_tmp1->dt_entry_m->dtb_data, dt_node_tmp1->dt_entry_m->dtb_size);
 
             dt_node_tmp2 = (dt_entry_node_t *) dt_node_tmp1->node.prev;
             dt_entry_list_delete(dt_node_tmp1);
@@ -906,8 +906,8 @@ int libboot_qcdt_get_entry_info(dt_table_t *table, dt_entry_local_t *dt_entry_in
                 cur_dt_entry->pmic_rev[1] = libboot_qcdt_pmic_target(1);
                 cur_dt_entry->pmic_rev[2] = libboot_qcdt_pmic_target(2);
                 cur_dt_entry->pmic_rev[3] = libboot_qcdt_pmic_target(3);
-                cur_dt_entry->offset = dt_entry_v1->offset;
-                cur_dt_entry->size = dt_entry_v1->size;
+                cur_dt_entry->dtb_data = ((boot_uint8_t *)table) + dt_entry_v1->offset;
+                cur_dt_entry->dtb_size = dt_entry_v1->size;
                 table_ptr += sizeof(dt_entry_v1_t);
                 break;
             case DEV_TREE_VERSION_V2:
@@ -933,8 +933,8 @@ int libboot_qcdt_get_entry_info(dt_table_t *table, dt_entry_local_t *dt_entry_in
                 cur_dt_entry->pmic_rev[1] = libboot_qcdt_pmic_target(1);
                 cur_dt_entry->pmic_rev[2] = libboot_qcdt_pmic_target(2);
                 cur_dt_entry->pmic_rev[3] = libboot_qcdt_pmic_target(3);
-                cur_dt_entry->offset = dt_entry_v2->offset;
-                cur_dt_entry->size = dt_entry_v2->size;
+                cur_dt_entry->dtb_data = ((boot_uint8_t *)table) + dt_entry_v2->offset;;
+                cur_dt_entry->dtb_size = dt_entry_v2->size;
                 table_ptr += sizeof(dt_entry_v2_t);
                 break;
             case DEV_TREE_VERSION_V3:
@@ -949,8 +949,8 @@ int libboot_qcdt_get_entry_info(dt_table_t *table, dt_entry_local_t *dt_entry_in
                 cur_dt_entry->pmic_rev[2] = dt_entry_v3->pmic_rev[2];
                 cur_dt_entry->pmic_rev[3] = dt_entry_v3->pmic_rev[3];
 
-                cur_dt_entry->offset = dt_entry_v3->offset;
-                cur_dt_entry->size = dt_entry_v3->size;
+                cur_dt_entry->dtb_data = ((boot_uint8_t *)table) + dt_entry_v3->offset;
+                cur_dt_entry->dtb_size = dt_entry_v3->size;
 
                 /* For V3 version of DTBs we have platform version field as part
                  * of variant ID, in such case the subtype will be mentioned as 0x0

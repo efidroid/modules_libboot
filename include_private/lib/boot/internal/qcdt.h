@@ -88,8 +88,9 @@ typedef struct {
     boot_uint32_t board_hw_subtype;
     boot_uint32_t soc_rev;
     boot_uint32_t pmic_rev[4];
-    boot_uint32_t offset;
-    boot_uint32_t size;
+
+    void* dtb_data;
+    boot_uint32_t dtb_size;
 } dt_entry_local_t;
 
 typedef struct {
