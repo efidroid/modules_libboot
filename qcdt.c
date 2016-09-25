@@ -70,14 +70,9 @@ static void dt_entry_list_delete(dt_entry_node_t *dt_node_member)
 
 static void free_dt_entry_queue(dt_entry_node_t *dt_entry_queue)
 {
-    dt_entry_node_t *dt_node_tmp1 = NULL;
-    dt_entry_node_t *dt_node_tmp2 = NULL;
-
-    libboot_list_for_every_entry(&dt_entry_queue->node, dt_node_tmp1, dt_entry_node_t, node) {
-        /* libboot_free node memory */
-        dt_node_tmp2 = (dt_entry_node_t *) dt_node_tmp1->node.prev;
-        dt_entry_list_delete(dt_node_tmp1);
-        dt_node_tmp1 = dt_node_tmp2;
+    while (!libboot_list_is_empty(&dt_entry_queue->node)) {
+        dt_entry_node_t *dt_node = libboot_list_remove_tail_type(&dt_entry_queue->node, dt_entry_node_t, node);
+        dt_entry_list_delete(dt_node);
     }
     libboot_free(dt_entry_queue);
 }
