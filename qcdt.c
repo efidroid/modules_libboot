@@ -180,6 +180,7 @@ int libboot_qcdt_generate_entries(void *dtb, boot_uint32_t dtb_size, dt_entry_no
         libboot_platform_memset(cur_dt_entry, 0, sizeof(dt_entry_local_t));
 
         while (len_plat_id) {
+            cur_dt_entry->version = dtb_ver;
             cur_dt_entry->platform_id = fdt32_to_cpu(((const dt_entry_v1_t *)plat_prop)->platform_id);
             cur_dt_entry->variant_id = fdt32_to_cpu(((const dt_entry_v1_t *)plat_prop)->variant_id);
             cur_dt_entry->soc_rev = fdt32_to_cpu(((const dt_entry_v1_t *)plat_prop)->soc_rev);
@@ -301,6 +302,7 @@ int libboot_qcdt_generate_entries(void *dtb, boot_uint32_t dtb_size, dt_entry_no
             for (j = 0; j < board_data_count; j++) {
                 if (dtb_ver == DEV_TREE_VERSION_V3 && pmic_prop) {
                     for (n = 0; n < pmic_data_count; n++) {
+                        dt_entry_array[k].version = dtb_ver;
                         dt_entry_array[k].platform_id = platform_data[i].platform_id;
                         dt_entry_array[k].soc_rev = platform_data[i].soc_rev;
                         dt_entry_array[k].variant_id = board_data[j].variant_id;
@@ -315,6 +317,7 @@ int libboot_qcdt_generate_entries(void *dtb, boot_uint32_t dtb_size, dt_entry_no
                     }
 
                 } else {
+                    dt_entry_array[k].version = dtb_ver;
                     dt_entry_array[k].platform_id = platform_data[i].platform_id;
                     dt_entry_array[k].soc_rev = platform_data[i].soc_rev;
                     dt_entry_array[k].variant_id = board_data[j].variant_id;

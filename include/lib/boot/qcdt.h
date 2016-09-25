@@ -83,6 +83,8 @@ typedef struct {
 } dt_entry_t;
 
 typedef struct {
+    boot_uint32_t version;
+
     boot_uint32_t platform_id;
     boot_uint32_t variant_id;
     boot_uint32_t board_hw_subtype;
