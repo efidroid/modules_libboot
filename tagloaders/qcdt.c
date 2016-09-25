@@ -18,8 +18,6 @@
 #include <lib/boot/internal/boot_internal.h>
 #include <lib/boot/qcdt.h>
 
-#define DEV_TREE_MAGIC          0x54444351 /* "QCDT" */
-
 static int tagmodule_patch(bootimg_context_t *context)
 {
     dt_table_t *table = (dt_table_t *) context->tags_data;
