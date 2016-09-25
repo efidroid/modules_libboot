@@ -38,7 +38,7 @@ static int devtree_delete_incompatible_entries2(dt_entry_node_t *dt_list, boot_u
 /* Add function to allocate dt entry list, used for recording
 *  the entry which conform to devtree_entry_add_if_excact_match()
 */
-static dt_entry_node_t *dt_entry_list_alloc_node(void)
+dt_entry_node_t *dt_entry_list_alloc_node(void)
 {
     dt_entry_node_t *dt_node_member = NULL;
 
@@ -54,12 +54,12 @@ static dt_entry_node_t *dt_entry_list_alloc_node(void)
     return dt_node_member;
 }
 
-static void dt_entry_list_insert(dt_entry_node_t *dt_list, dt_entry_node_t *dt_node_member)
+void dt_entry_list_insert(dt_entry_node_t *dt_list, dt_entry_node_t *dt_node_member)
 {
     libboot_list_add_tail(&dt_list->node, &dt_node_member->node);
 }
 
-static void dt_entry_list_delete(dt_entry_node_t *dt_node_member)
+void dt_entry_list_delete(dt_entry_node_t *dt_node_member)
 {
     if (libboot_list_in_list(&dt_node_member->node)) {
         libboot_list_delete(&dt_node_member->node);
@@ -68,7 +68,7 @@ static void dt_entry_list_delete(dt_entry_node_t *dt_node_member)
     }
 }
 
-static dt_entry_node_t *dt_entry_list_create(void)
+dt_entry_node_t *dt_entry_list_create(void)
 {
     dt_entry_node_t *dt_list = (dt_entry_node_t *) libboot_alloc(sizeof(dt_entry_node_t));
     if (!dt_list)
@@ -80,7 +80,7 @@ static dt_entry_node_t *dt_entry_list_create(void)
     return dt_list;
 }
 
-static void dt_entry_list_free(dt_entry_node_t *dt_list)
+void dt_entry_list_free(dt_entry_node_t *dt_list)
 {
     while (!libboot_list_is_empty(&dt_list->node)) {
         dt_entry_node_t *dt_node = libboot_list_remove_tail_type(&dt_list->node, dt_entry_node_t, node);
