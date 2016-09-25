@@ -26,11 +26,11 @@ add_library(boot
 include_directories(
     include
     include_private
-    test/include
+    platforms/posix/include
 )
 
 add_executable(libboot_test
     test/main.c
-    test/platform.c
+    platforms/posix/platform.c
 )
 target_link_libraries(libboot_test boot fdt z)
