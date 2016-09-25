@@ -1004,6 +1004,7 @@ int libboot_qcdt_get_entry_info(dt_table_t *table, dt_entry_local_t *dt_entry_in
                 cur_dt_entry->data.pmic_rev[3] = libboot_qcdt_pmic_target(3);
                 cur_dt_entry->dtb_data = ((boot_uint8_t *)table) + dt_entry_v1->offset;
                 cur_dt_entry->dtb_size = dt_entry_v1->size;
+                cur_dt_entry->parser = "qcom";
                 table_ptr += sizeof(dt_entry_v1_t);
                 break;
             case DEV_TREE_VERSION_V2:
@@ -1031,6 +1032,7 @@ int libboot_qcdt_get_entry_info(dt_table_t *table, dt_entry_local_t *dt_entry_in
                 cur_dt_entry->data.pmic_rev[3] = libboot_qcdt_pmic_target(3);
                 cur_dt_entry->dtb_data = ((boot_uint8_t *)table) + dt_entry_v2->offset;;
                 cur_dt_entry->dtb_size = dt_entry_v2->size;
+                cur_dt_entry->parser = "qcom";
                 table_ptr += sizeof(dt_entry_v2_t);
                 break;
             case DEV_TREE_VERSION_V3:
@@ -1047,6 +1049,7 @@ int libboot_qcdt_get_entry_info(dt_table_t *table, dt_entry_local_t *dt_entry_in
 
                 cur_dt_entry->dtb_data = ((boot_uint8_t *)table) + dt_entry_v3->offset;
                 cur_dt_entry->dtb_size = dt_entry_v3->size;
+                cur_dt_entry->parser = "qcom";
 
                 /* For V3 version of DTBs we have platform version field as part
                  * of variant ID, in such case the subtype will be mentioned as 0x0
