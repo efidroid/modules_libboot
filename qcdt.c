@@ -98,11 +98,11 @@ typedef enum {
 } fdt_parser_t;
 
 static fdt_parser_t libboot_qcdt_get_parser(const char * parser) {
-    if(!strcmp(parser, "qcom"))
+    if(!libboot_platform_strcmp(parser, "qcom"))
         return FDT_PARSER_QCOM;
-    if(!strcmp(parser, "qcom_lge"))
+    if(!libboot_platform_strcmp(parser, "qcom_lge"))
         return FDT_PARSER_QCOM_LGE;
-    if(!strcmp(parser, "qcom_oppo"))
+    if(!libboot_platform_strcmp(parser, "qcom_oppo"))
         return FDT_PARSER_QCOM_OPPO;
 
     return FDT_PARSER_UNKNOWN;
