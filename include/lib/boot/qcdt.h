@@ -143,6 +143,8 @@ typedef struct {
     dt_entry_local_t *dt_entry_m;
 } dt_entry_node_t;
 
+typedef void (*dt_entry_add_cb_t)(dt_entry_local_t *cur_dt_entry, dt_entry_node_t *dt_list, const char *model);
+
 
 dt_entry_node_t *dt_entry_list_alloc_node(void);
 void dt_entry_list_insert(dt_entry_node_t *dt_list, dt_entry_node_t *dt_node_member);
@@ -153,4 +155,5 @@ void dt_entry_list_free(dt_entry_node_t *dt_list);
 int libboot_qcdt_validate(dt_table_t *table, boot_uint32_t *dt_hdr_size);
 int libboot_qcdt_get_entry_info(dt_table_t *table, dt_entry_local_t *dt_entry_info);
 void *libboot_qcdt_appended(void *fdt, boot_uintn_t fdt_size);
+int libboot_qcdt_generate_entries(void *dtb, boot_uint32_t dtb_size, dt_entry_node_t *dtb_list, dt_entry_add_cb_t cb);
 #endif // LIB_BOOT_QCDT_H

@@ -89,7 +89,7 @@ void dt_entry_list_free(dt_entry_node_t *dt_list)
     libboot_free(dt_list);
 }
 
-static int libboot_qcdt_add_compatible_entries(void *dtb, boot_uint32_t dtb_size, dt_entry_node_t *dtb_list)
+int libboot_qcdt_generate_entries(void *dtb, boot_uint32_t dtb_size, dt_entry_node_t *dtb_list, dt_entry_add_cb_t cb)
 {
     int root_offset;
     const void *prop = NULL;
@@ -192,28 +192,7 @@ static int libboot_qcdt_add_compatible_entries(void *dtb, boot_uint32_t dtb_size
             cur_dt_entry->dtb_data = dtb;
             cur_dt_entry->dtb_size = dtb_size;
 
-            LOGV("Found an appended flattened device tree (%s - %u %u 0x%x)\n",
-                 *model ? model : "unknown",
-                 cur_dt_entry->platform_id, cur_dt_entry->variant_id, cur_dt_entry->soc_rev);
-
-            if (devtree_entry_add_if_excact_match(cur_dt_entry, dtb_list)) {
-                LOGV("Device tree exact match the board: <%u %u 0x%x> == <%u %u 0x%x>\n",
-                     cur_dt_entry->platform_id,
-                     cur_dt_entry->variant_id,
-                     cur_dt_entry->soc_rev,
-                     libboot_qcdt_platform_id(),
-                     libboot_qcdt_hardware_id(),
-                     libboot_qcdt_soc_version());
-
-            } else {
-                LOGV("Device tree's msm_id doesn't match the board: <%u %u 0x%x> != <%u %u 0x%x>\n",
-                     cur_dt_entry->platform_id,
-                     cur_dt_entry->variant_id,
-                     cur_dt_entry->soc_rev,
-                     libboot_qcdt_platform_id(),
-                     libboot_qcdt_hardware_id(),
-                     libboot_qcdt_soc_version());
-            }
+            cb(cur_dt_entry, dtb_list, model);
 
             plat_prop += DT_ENTRY_V1_SIZE;
             len_plat_id -= DT_ENTRY_V1_SIZE;
@@ -352,32 +331,7 @@ static int libboot_qcdt_add_compatible_entries(void *dtb, boot_uint32_t dtb_size
         }
 
         for (i=0 ; i < num_entries; i++) {
-            LOGV("Found an appended flattened device tree (%s - %u %u %u 0x%x)\n",
-                 *model ? model : "unknown",
-                 dt_entry_array[i].platform_id, dt_entry_array[i].variant_id, dt_entry_array[i].board_hw_subtype, dt_entry_array[i].soc_rev);
-
-            if (devtree_entry_add_if_excact_match(&(dt_entry_array[i]), dtb_list)) {
-                LOGV("Device tree exact match the board: <%u %u %u 0x%x> == <%u %u %u 0x%x>\n",
-                     dt_entry_array[i].platform_id,
-                     dt_entry_array[i].variant_id,
-                     dt_entry_array[i].soc_rev,
-                     dt_entry_array[i].board_hw_subtype,
-                     libboot_qcdt_platform_id(),
-                     libboot_qcdt_hardware_id(),
-                     libboot_qcdt_hardware_subtype(),
-                     libboot_qcdt_soc_version());
-
-            } else {
-                LOGV("Device tree's msm_id doesn't match the board: <%u %u %u 0x%x> != <%u %u %u 0x%x>\n",
-                     dt_entry_array[i].platform_id,
-                     dt_entry_array[i].variant_id,
-                     dt_entry_array[i].soc_rev,
-                     dt_entry_array[i].board_hw_subtype,
-                     libboot_qcdt_platform_id(),
-                     libboot_qcdt_hardware_id(),
-                     libboot_qcdt_hardware_subtype(),
-                     libboot_qcdt_soc_version());
-            }
+            cb(&(dt_entry_array[i]), dtb_list, model);
         }
 
         libboot_free(board_data);
@@ -389,6 +343,39 @@ static int libboot_qcdt_add_compatible_entries(void *dtb, boot_uint32_t dtb_size
     if (model)
         libboot_free(model);
     return 1;
+}
+
+static void generate_entries_add_cb(dt_entry_local_t *dt_entry, dt_entry_node_t *dt_list, const char *model) {
+    LOGV("Found an appended flattened device tree (%s - %u %u %u 0x%x)\n",
+         *model ? model : "unknown",
+         dt_entry->platform_id, dt_entry->variant_id, dt_entry->board_hw_subtype, dt_entry->soc_rev);
+
+    if (devtree_entry_add_if_excact_match(dt_entry, dt_list)) {
+        LOGV("Device tree exact match the board: <%u %u %u 0x%x> == <%u %u %u 0x%x>\n",
+             dt_entry->platform_id,
+             dt_entry->variant_id,
+             dt_entry->soc_rev,
+             dt_entry->board_hw_subtype,
+             libboot_qcdt_platform_id(),
+             libboot_qcdt_hardware_id(),
+             libboot_qcdt_hardware_subtype(),
+             libboot_qcdt_soc_version());
+
+    } else {
+        LOGV("Device tree's msm_id doesn't match the board: <%u %u %u 0x%x> != <%u %u %u 0x%x>\n",
+             dt_entry->platform_id,
+             dt_entry->variant_id,
+             dt_entry->soc_rev,
+             dt_entry->board_hw_subtype,
+             libboot_qcdt_platform_id(),
+             libboot_qcdt_hardware_id(),
+             libboot_qcdt_hardware_subtype(),
+             libboot_qcdt_soc_version());
+    }
+}
+
+static int libboot_qcdt_add_compatible_entries(void *dtb, boot_uint32_t dtb_size, dt_entry_node_t *dtb_list) {
+    return libboot_qcdt_generate_entries(dtb, dtb_size, dtb_list, generate_entries_add_cb);
 }
 
 /*
