@@ -150,6 +150,7 @@ static int ldrmodule_load(bootimg_context_t *context, boot_uintn_t type, boot_ui
 
         libboot_free(context->tags_data);
         context->tags_data = fdt;
+        context->tags_size = context->kernel_size - pos;
     }
 
     // re-identify with kernel as image
