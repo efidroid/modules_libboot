@@ -29,6 +29,7 @@
 #include <lib/boot.h>
 #include <lib/boot/internal/boot_internal.h>
 #include <lib/boot/qcdt.h>
+#include <lib/boot/internal/qcdt.h>
 #include <libfdt.h>
 
 static int devtree_entry_add_if_excact_match(dt_entry_local_t *cur_dt_entry, dt_entry_node_t *dt_list);
@@ -122,9 +123,11 @@ int libboot_qcdt_generate_entries(void *dtb, boot_uint32_t dtb_size, dt_entry_no
     pmic_id_t *pmic_data = NULL;
     int len;
     int len_board_id;
+    int len_board_id_item = 0;
     int len_plat_id;
     int len_plat_id_item = 0;
     int len_pmic_id;
+    int len_pmic_id_item = 0;
     boot_uint32_t dtb_ver;
     boot_uint32_t num_entries = 0;
     boot_uint32_t i, j, k, n;
@@ -157,27 +160,41 @@ int libboot_qcdt_generate_entries(void *dtb, boot_uint32_t dtb_size, dt_entry_no
     pmic_prop = (const char *)fdt_getprop(dtb, root_offset, "qcom,pmic-id", &len_pmic_id);
     board_prop = (const char *)fdt_getprop(dtb, root_offset, "qcom,board-id", &len_board_id);
     if (pmic_prop && (len_pmic_id > 0) && board_prop && (len_board_id > 0)) {
-        if ((len_pmic_id % PMIC_ID_SIZE) || (len_board_id % BOARD_ID_SIZE)) {
-            LOGE("qcom,pmic-id(%d) or qcom,board-id(%d) in device tree is not a multiple of (%d %d)\n",
-                 len_pmic_id, len_board_id, PMIC_ID_SIZE, BOARD_ID_SIZE);
-            return 0;
-        }
         dtb_ver = DEV_TREE_VERSION_V3;
         len_plat_id_item = PLAT_ID_SIZE;
+        len_board_id_item = BOARD_ID_SIZE;
+        len_pmic_id_item = PMIC_ID_SIZE;
     } else if (board_prop && len_board_id > 0) {
-        if (len_board_id % BOARD_ID_SIZE) {
-            LOGE("qcom,board-id in device tree is (%d) not a multiple of (%d)\n",
-                 len_board_id, BOARD_ID_SIZE);
-            return 0;
-        }
         dtb_ver = DEV_TREE_VERSION_V2;
         len_plat_id_item = PLAT_ID_SIZE;
+        len_board_id_item = BOARD_ID_SIZE;
     } else {
         dtb_ver = DEV_TREE_VERSION_V1;
         len_plat_id_item = DT_ENTRY_V1_SIZE;
+        len_board_id_item = BOARD_ID_SIZE;
 
         if(parser==FDT_PARSER_QCOM_LGE) {
             len_plat_id_item = 4 * sizeof(boot_uint32_t);
+        }
+    }
+
+    if(parser==FDT_PARSER_QCOM_OPPO) {
+        len_board_id_item = 4 * sizeof(boot_uint32_t);
+    }
+
+    if (dtb_ver == DEV_TREE_VERSION_V2 || dtb_ver == DEV_TREE_VERSION_V3) {
+        if (len_board_id % len_board_id_item) {
+            LOGE("qcom,board-id in device tree is (%d) not a multiple of (%d)\n",
+                 len_board_id, len_board_id_item);
+            return 0;
+        }
+    }
+
+    if (dtb_ver == DEV_TREE_VERSION_V3) {
+        if ((len_pmic_id % len_pmic_id_item)) {
+            LOGE("qcom,pmic-id(%d) in device tree is not a multiple of (%d)\n",
+                 len_pmic_id, len_pmic_id_item);
+            return 0;
         }
     }
 
@@ -209,21 +226,22 @@ int libboot_qcdt_generate_entries(void *dtb, boot_uint32_t dtb_size, dt_entry_no
         libboot_platform_memset(cur_dt_entry, 0, sizeof(dt_entry_local_t));
 
         while (len_plat_id) {
-            cur_dt_entry->version = dtb_ver;
-            cur_dt_entry->platform_id = fdt32_to_cpu(((const dt_entry_v1_t *)plat_prop)->platform_id);
-            cur_dt_entry->variant_id = fdt32_to_cpu(((const dt_entry_v1_t *)plat_prop)->variant_id);
-            cur_dt_entry->soc_rev = fdt32_to_cpu(((const dt_entry_v1_t *)plat_prop)->soc_rev);
-            cur_dt_entry->board_hw_subtype =
+            cur_dt_entry->data.version = dtb_ver;
+            cur_dt_entry->data.platform_id = fdt32_to_cpu(((const dt_entry_v1_t *)plat_prop)->platform_id);
+            cur_dt_entry->data.variant_id = fdt32_to_cpu(((const dt_entry_v1_t *)plat_prop)->variant_id);
+            cur_dt_entry->data.soc_rev = fdt32_to_cpu(((const dt_entry_v1_t *)plat_prop)->soc_rev);
+            cur_dt_entry->data.board_hw_subtype =
                 fdt32_to_cpu(((const dt_entry_v1_t *)plat_prop)->variant_id) >> 0x18;
-            cur_dt_entry->pmic_rev[0] = libboot_qcdt_pmic_target(0);
-            cur_dt_entry->pmic_rev[1] = libboot_qcdt_pmic_target(1);
-            cur_dt_entry->pmic_rev[2] = libboot_qcdt_pmic_target(2);
-            cur_dt_entry->pmic_rev[3] = libboot_qcdt_pmic_target(3);
+            cur_dt_entry->data.pmic_rev[0] = libboot_qcdt_pmic_target(0);
+            cur_dt_entry->data.pmic_rev[1] = libboot_qcdt_pmic_target(1);
+            cur_dt_entry->data.pmic_rev[2] = libboot_qcdt_pmic_target(2);
+            cur_dt_entry->data.pmic_rev[3] = libboot_qcdt_pmic_target(3);
             cur_dt_entry->dtb_data = dtb;
             cur_dt_entry->dtb_size = dtb_size;
+            cur_dt_entry->parser = sparser;
 
             if(parser==FDT_PARSER_QCOM_LGE) {
-                cur_dt_entry->lge_rev = fdt32_to_cpu(*((boot_uint32_t*)(plat_prop + 3*sizeof(boot_uint32_t))));
+                cur_dt_entry->data.u.lge.lge_rev = fdt32_to_cpu(*((boot_uint32_t*)(plat_prop + 3*sizeof(boot_uint32_t))));
             }
 
             cb(cur_dt_entry, dtb_list, model);
@@ -240,20 +258,20 @@ int libboot_qcdt_generate_entries(void *dtb, boot_uint32_t dtb_size, dt_entry_no
      * Extract the data & prepare a look up table
      */
     else if (dtb_ver == DEV_TREE_VERSION_V2 || dtb_ver == DEV_TREE_VERSION_V3) {
-        board_data_count = (len_board_id / BOARD_ID_SIZE);
-        msm_data_count = (len_plat_id / PLAT_ID_SIZE);
+        board_data_count = (len_board_id / len_board_id_item);
+        msm_data_count = (len_plat_id / len_plat_id_item);
         /* If dtb version is v2.0, the pmic_data_count will be <= 0 */
-        pmic_data_count = (len_pmic_id / PMIC_ID_SIZE);
+        pmic_data_count = (len_pmic_id / len_pmic_id_item);
 
         /* If we are using dtb v3.0, then we have split board, msm & pmic data in the DTB
         *  If we are using dtb v2.0, then we have split board & msmdata in the DTB
         */
-        board_data = (board_id_t *) libboot_alloc(sizeof(board_id_t) * (len_board_id / BOARD_ID_SIZE));
+        board_data = (board_id_t *) libboot_alloc(sizeof(board_id_t) * board_data_count);
         LIBBOOT_ASSERT(board_data);
-        platform_data = (plat_id_t *) libboot_alloc(sizeof(plat_id_t) * (len_plat_id / PLAT_ID_SIZE));
+        platform_data = (plat_id_t *) libboot_alloc(sizeof(plat_id_t) * msm_data_count);
         LIBBOOT_ASSERT(platform_data);
         if (dtb_ver == DEV_TREE_VERSION_V3) {
-            pmic_data = (pmic_id_t *) libboot_alloc(sizeof(pmic_id_t) * (len_pmic_id / PMIC_ID_SIZE));
+            pmic_data = (pmic_id_t *) libboot_alloc(sizeof(pmic_id_t) * pmic_data_count);
             LIBBOOT_ASSERT(pmic_data);
         }
         i = 0;
@@ -262,6 +280,12 @@ int libboot_qcdt_generate_entries(void *dtb, boot_uint32_t dtb_size, dt_entry_no
         for (i = 0 ; i < board_data_count; i++) {
             board_data[i].variant_id = fdt32_to_cpu(((board_id_t *)board_prop)->variant_id);
             board_data[i].platform_subtype = fdt32_to_cpu(((board_id_t *)board_prop)->platform_subtype);
+
+            if(parser==FDT_PARSER_QCOM_OPPO) {
+                board_data[i].u.oppo.id0 = fdt32_to_cpu(((board_id_t *)board_prop)->u.oppo.id0);
+                board_data[i].u.oppo.id1 = fdt32_to_cpu(((board_id_t *)board_prop)->u.oppo.id1);
+            }
+
             /* For V2/V3 version of DTBs we have platform version field as part
              * of variant ID, in such case the subtype will be mentioned as 0x0
              * As the qcom, board-id = <0xSSPMPmPH, 0x0>
@@ -276,16 +300,16 @@ int libboot_qcdt_generate_entries(void *dtb, boot_uint32_t dtb_size, dt_entry_no
                 board_data[i].platform_subtype =
                     fdt32_to_cpu(((board_id_t *)board_prop)->variant_id) >> 0x18;
 
-            len_board_id -= sizeof(board_id_t);
-            board_prop += sizeof(board_id_t);
+            len_board_id -= len_board_id_item;
+            board_prop += len_board_id_item;
         }
 
         /* Extract platform data from DTB */
         for (i = 0 ; i < msm_data_count; i++) {
             platform_data[i].platform_id = fdt32_to_cpu(((plat_id_t *)plat_prop)->platform_id);
             platform_data[i].soc_rev = fdt32_to_cpu(((plat_id_t *)plat_prop)->soc_rev);
-            len_plat_id -= sizeof(plat_id_t);
-            plat_prop += sizeof(plat_id_t);
+            len_plat_id -= len_plat_id_item;
+            plat_prop += len_plat_id_item;
         }
 
         if (dtb_ver == DEV_TREE_VERSION_V3 && pmic_prop) {
@@ -295,8 +319,8 @@ int libboot_qcdt_generate_entries(void *dtb, boot_uint32_t dtb_size, dt_entry_no
                 pmic_data[i].pmic_version[1]= fdt32_to_cpu(((pmic_id_t *)pmic_prop)->pmic_version[1]);
                 pmic_data[i].pmic_version[2]= fdt32_to_cpu(((pmic_id_t *)pmic_prop)->pmic_version[2]);
                 pmic_data[i].pmic_version[3]= fdt32_to_cpu(((pmic_id_t *)pmic_prop)->pmic_version[3]);
-                len_pmic_id -= sizeof(pmic_id_t);
-                pmic_prop += sizeof(pmic_id_t);
+                len_pmic_id -= len_pmic_id_item;
+                pmic_prop += len_pmic_id_item;
             }
 
             /* We need to merge board & platform data into dt entry structure */
@@ -335,32 +359,46 @@ int libboot_qcdt_generate_entries(void *dtb, boot_uint32_t dtb_size, dt_entry_no
             for (j = 0; j < board_data_count; j++) {
                 if (dtb_ver == DEV_TREE_VERSION_V3 && pmic_prop) {
                     for (n = 0; n < pmic_data_count; n++) {
-                        dt_entry_array[k].version = dtb_ver;
-                        dt_entry_array[k].platform_id = platform_data[i].platform_id;
-                        dt_entry_array[k].soc_rev = platform_data[i].soc_rev;
-                        dt_entry_array[k].variant_id = board_data[j].variant_id;
-                        dt_entry_array[k].board_hw_subtype = board_data[j].platform_subtype;
-                        dt_entry_array[k].pmic_rev[0]= pmic_data[n].pmic_version[0];
-                        dt_entry_array[k].pmic_rev[1]= pmic_data[n].pmic_version[1];
-                        dt_entry_array[k].pmic_rev[2]= pmic_data[n].pmic_version[2];
-                        dt_entry_array[k].pmic_rev[3]= pmic_data[n].pmic_version[3];
+                        dt_entry_array[k].data.version = dtb_ver;
+                        dt_entry_array[k].data.platform_id = platform_data[i].platform_id;
+                        dt_entry_array[k].data.soc_rev = platform_data[i].soc_rev;
+                        dt_entry_array[k].data.variant_id = board_data[j].variant_id;
+                        dt_entry_array[k].data.board_hw_subtype = board_data[j].platform_subtype;
+                        dt_entry_array[k].data.pmic_rev[0]= pmic_data[n].pmic_version[0];
+                        dt_entry_array[k].data.pmic_rev[1]= pmic_data[n].pmic_version[1];
+                        dt_entry_array[k].data.pmic_rev[2]= pmic_data[n].pmic_version[2];
+                        dt_entry_array[k].data.pmic_rev[3]= pmic_data[n].pmic_version[3];
                         dt_entry_array[k].dtb_data = dtb;
                         dt_entry_array[k].dtb_size = dtb_size;
+                        dt_entry_array[k].parser = sparser;
+
+                        if(parser==FDT_PARSER_QCOM_OPPO) {
+                            dt_entry_array[k].data.u.oppo.id0 = board_data[j].u.oppo.id0;
+                            dt_entry_array[k].data.u.oppo.id1 = board_data[j].u.oppo.id1;
+                        }
+
                         k++;
                     }
 
                 } else {
-                    dt_entry_array[k].version = dtb_ver;
-                    dt_entry_array[k].platform_id = platform_data[i].platform_id;
-                    dt_entry_array[k].soc_rev = platform_data[i].soc_rev;
-                    dt_entry_array[k].variant_id = board_data[j].variant_id;
-                    dt_entry_array[k].board_hw_subtype = board_data[j].platform_subtype;
-                    dt_entry_array[k].pmic_rev[0]= libboot_qcdt_pmic_target(0);
-                    dt_entry_array[k].pmic_rev[1]= libboot_qcdt_pmic_target(1);
-                    dt_entry_array[k].pmic_rev[2]= libboot_qcdt_pmic_target(2);
-                    dt_entry_array[k].pmic_rev[3]= libboot_qcdt_pmic_target(3);
+                    dt_entry_array[k].data.version = dtb_ver;
+                    dt_entry_array[k].data.platform_id = platform_data[i].platform_id;
+                    dt_entry_array[k].data.soc_rev = platform_data[i].soc_rev;
+                    dt_entry_array[k].data.variant_id = board_data[j].variant_id;
+                    dt_entry_array[k].data.board_hw_subtype = board_data[j].platform_subtype;
+                    dt_entry_array[k].data.pmic_rev[0]= libboot_qcdt_pmic_target(0);
+                    dt_entry_array[k].data.pmic_rev[1]= libboot_qcdt_pmic_target(1);
+                    dt_entry_array[k].data.pmic_rev[2]= libboot_qcdt_pmic_target(2);
+                    dt_entry_array[k].data.pmic_rev[3]= libboot_qcdt_pmic_target(3);
                     dt_entry_array[k].dtb_data = dtb;
                     dt_entry_array[k].dtb_size = dtb_size;
+                    dt_entry_array[k].parser = sparser;
+
+                    if(parser==FDT_PARSER_QCOM_OPPO) {
+                        dt_entry_array[k].data.u.oppo.id0 = board_data[j].u.oppo.id0;
+                        dt_entry_array[k].data.u.oppo.id1 = board_data[j].u.oppo.id1;
+                    }
+
                     k++;
                 }
             }
@@ -384,14 +422,14 @@ int libboot_qcdt_generate_entries(void *dtb, boot_uint32_t dtb_size, dt_entry_no
 static void generate_entries_add_cb(dt_entry_local_t *dt_entry, dt_entry_node_t *dt_list, const char *model) {
     LOGV("Found an appended flattened device tree (%s - %u %u %u 0x%x)\n",
          *model ? model : "unknown",
-         dt_entry->platform_id, dt_entry->variant_id, dt_entry->board_hw_subtype, dt_entry->soc_rev);
+         dt_entry->data.platform_id, dt_entry->data.variant_id, dt_entry->data.board_hw_subtype, dt_entry->data.soc_rev);
 
     if (devtree_entry_add_if_excact_match(dt_entry, dt_list)) {
         LOGV("Device tree exact match the board: <%u %u %u 0x%x> == <%u %u %u 0x%x>\n",
-             dt_entry->platform_id,
-             dt_entry->variant_id,
-             dt_entry->soc_rev,
-             dt_entry->board_hw_subtype,
+             dt_entry->data.platform_id,
+             dt_entry->data.variant_id,
+             dt_entry->data.soc_rev,
+             dt_entry->data.board_hw_subtype,
              libboot_qcdt_platform_id(),
              libboot_qcdt_hardware_id(),
              libboot_qcdt_hardware_subtype(),
@@ -399,10 +437,10 @@ static void generate_entries_add_cb(dt_entry_local_t *dt_entry, dt_entry_node_t 
 
     } else {
         LOGV("Device tree's msm_id doesn't match the board: <%u %u %u 0x%x> != <%u %u %u 0x%x>\n",
-             dt_entry->platform_id,
-             dt_entry->variant_id,
-             dt_entry->soc_rev,
-             dt_entry->board_hw_subtype,
+             dt_entry->data.platform_id,
+             dt_entry->data.variant_id,
+             dt_entry->data.soc_rev,
+             dt_entry->data.board_hw_subtype,
              libboot_qcdt_platform_id(),
              libboot_qcdt_hardware_id(),
              libboot_qcdt_hardware_subtype(),
@@ -466,14 +504,14 @@ void *libboot_qcdt_appended(void *fdt, boot_uintn_t fdt_size, const char *parser
     if (best_match_dt_entry) {
         bestmatch_tag = best_match_dt_entry->dtb_data;
         LOGI("Best match DTB tags %u/%08x/0x%08x/%x/%x/%x/%x/%x/%p/%x\n",
-             best_match_dt_entry->platform_id, best_match_dt_entry->variant_id,
-             best_match_dt_entry->board_hw_subtype, best_match_dt_entry->soc_rev,
-             best_match_dt_entry->pmic_rev[0], best_match_dt_entry->pmic_rev[1],
-             best_match_dt_entry->pmic_rev[2], best_match_dt_entry->pmic_rev[3],
+             best_match_dt_entry->data.platform_id, best_match_dt_entry->data.variant_id,
+             best_match_dt_entry->data.board_hw_subtype, best_match_dt_entry->data.soc_rev,
+             best_match_dt_entry->data.pmic_rev[0], best_match_dt_entry->data.pmic_rev[1],
+             best_match_dt_entry->data.pmic_rev[2], best_match_dt_entry->data.pmic_rev[3],
              best_match_dt_entry->dtb_data, best_match_dt_entry->dtb_size);
         LOGI("Using pmic info 0x%0x/0x%x/0x%x/0x%0x for device 0x%0x/0x%x/0x%x/0x%0x\n",
-             best_match_dt_entry->pmic_rev[0], best_match_dt_entry->pmic_rev[1],
-             best_match_dt_entry->pmic_rev[2], best_match_dt_entry->pmic_rev[3],
+             best_match_dt_entry->data.pmic_rev[0], best_match_dt_entry->data.pmic_rev[1],
+             best_match_dt_entry->data.pmic_rev[2], best_match_dt_entry->data.pmic_rev[3],
              libboot_qcdt_pmic_target(0), libboot_qcdt_pmic_target(1),
              libboot_qcdt_pmic_target(2), libboot_qcdt_pmic_target(3));
     }
@@ -541,12 +579,12 @@ static int devtree_entry_add_if_excact_match(dt_entry_local_t *cur_dt_entry, dt_
     * bit no |31     24|23  16|15   0|
     *        |reserved|foundry-id|msm-id|
     */
-    cur_dt_msm_id = (cur_dt_entry->platform_id & 0x0000ffff);
-    cur_dt_hw_platform = (cur_dt_entry->variant_id & 0x000000ff);
-    cur_dt_hw_subtype = (cur_dt_entry->board_hw_subtype & 0xff);
+    cur_dt_msm_id = (cur_dt_entry->data.platform_id & 0x0000ffff);
+    cur_dt_hw_platform = (cur_dt_entry->data.variant_id & 0x000000ff);
+    cur_dt_hw_subtype = (cur_dt_entry->data.board_hw_subtype & 0xff);
 
     /* Determine the bits 10:8 to check the DT with the DDR Size */
-    cur_dt_hlos_ddr = (cur_dt_entry->board_hw_subtype & 0x700);
+    cur_dt_hlos_ddr = (cur_dt_entry->data.board_hw_subtype & 0x700);
 
     /* 1. must match the msm_id, platform_hw_id, platform_subtype and DDR size
     *  soc, board major/minor, pmic major/minor must less than board info
@@ -557,21 +595,21 @@ static int devtree_entry_add_if_excact_match(dt_entry_local_t *cur_dt_entry, dt_
             (cur_dt_hw_platform == libboot_qcdt_hardware_id()) &&
             (cur_dt_hw_subtype == libboot_qcdt_hardware_subtype()) &&
             (cur_dt_hlos_ddr == (libboot_qcdt_get_hlos_subtype() & 0x700)) &&
-            (cur_dt_entry->soc_rev <= libboot_qcdt_soc_version()) &&
-            ((cur_dt_entry->variant_id & 0x00ffff00) <= (libboot_qcdt_target_id() & 0x00ffff00)) &&
-            ((cur_dt_entry->pmic_rev[0] & 0x00ffff00) <= (libboot_qcdt_pmic_target(0) & 0x00ffff00)) &&
-            ((cur_dt_entry->pmic_rev[1] & 0x00ffff00) <= (libboot_qcdt_pmic_target(1) & 0x00ffff00)) &&
-            ((cur_dt_entry->pmic_rev[2] & 0x00ffff00) <= (libboot_qcdt_pmic_target(2) & 0x00ffff00)) &&
-            ((cur_dt_entry->pmic_rev[3] & 0x00ffff00) <= (libboot_qcdt_pmic_target(3) & 0x00ffff00))) {
+            (cur_dt_entry->data.soc_rev <= libboot_qcdt_soc_version()) &&
+            ((cur_dt_entry->data.variant_id & 0x00ffff00) <= (libboot_qcdt_target_id() & 0x00ffff00)) &&
+            ((cur_dt_entry->data.pmic_rev[0] & 0x00ffff00) <= (libboot_qcdt_pmic_target(0) & 0x00ffff00)) &&
+            ((cur_dt_entry->data.pmic_rev[1] & 0x00ffff00) <= (libboot_qcdt_pmic_target(1) & 0x00ffff00)) &&
+            ((cur_dt_entry->data.pmic_rev[2] & 0x00ffff00) <= (libboot_qcdt_pmic_target(2) & 0x00ffff00)) &&
+            ((cur_dt_entry->data.pmic_rev[3] & 0x00ffff00) <= (libboot_qcdt_pmic_target(3) & 0x00ffff00))) {
 
         dt_node_tmp = dt_entry_list_alloc_node();
         libboot_platform_memmove((char *)dt_node_tmp->dt_entry_m,(char *)cur_dt_entry, sizeof(dt_entry_local_t));
 
         LOGV("Add DTB entry %u/%08x/0x%08x/%x/%x/%x/%x/%x/%p/%x\n",
-             dt_node_tmp->dt_entry_m->platform_id, dt_node_tmp->dt_entry_m->variant_id,
-             dt_node_tmp->dt_entry_m->board_hw_subtype, dt_node_tmp->dt_entry_m->soc_rev,
-             dt_node_tmp->dt_entry_m->pmic_rev[0], dt_node_tmp->dt_entry_m->pmic_rev[1],
-             dt_node_tmp->dt_entry_m->pmic_rev[2], dt_node_tmp->dt_entry_m->pmic_rev[3],
+             dt_node_tmp->dt_entry_m->data.platform_id, dt_node_tmp->dt_entry_m->data.variant_id,
+             dt_node_tmp->dt_entry_m->data.board_hw_subtype, dt_node_tmp->dt_entry_m->data.soc_rev,
+             dt_node_tmp->dt_entry_m->data.pmic_rev[0], dt_node_tmp->dt_entry_m->data.pmic_rev[1],
+             dt_node_tmp->dt_entry_m->data.pmic_rev[2], dt_node_tmp->dt_entry_m->data.pmic_rev[3],
              dt_node_tmp->dt_entry_m->dtb_data, dt_node_tmp->dt_entry_m->dtb_size);
 
         dt_entry_list_insert(dt_list, dt_node_tmp);
@@ -604,21 +642,21 @@ static int devtree_delete_incompatible_entries(dt_entry_node_t *dt_list, boot_ui
         }
         switch (dtb_info) {
             case DTB_FOUNDRY:
-                current_info = ((dt_node_tmp1->dt_entry_m->platform_id) & 0x00ff0000);
+                current_info = ((dt_node_tmp1->dt_entry_m->data.platform_id) & 0x00ff0000);
                 board_info = libboot_qcdt_foundry_id() << 16;
                 break;
             case DTB_PMIC_MODEL:
                 for (i = 0; i < 4; i++) {
-                    current_pmic_model[i] = (dt_node_tmp1->dt_entry_m->pmic_rev[i] & 0xff);
+                    current_pmic_model[i] = (dt_node_tmp1->dt_entry_m->data.pmic_rev[i] & 0xff);
                     board_pmic_model[i] = (libboot_qcdt_pmic_target(i) & 0xff);
                 }
                 break;
             case DTB_PANEL_TYPE:
-                current_info = ((dt_node_tmp1->dt_entry_m->board_hw_subtype) & 0x1800);
+                current_info = ((dt_node_tmp1->dt_entry_m->data.board_hw_subtype) & 0x1800);
                 board_info = (libboot_qcdt_get_hlos_subtype() & 0x1800);
                 break;
             case DTB_BOOT_DEVICE:
-                current_info = ((dt_node_tmp1->dt_entry_m->board_hw_subtype) & 0xf0000);
+                current_info = ((dt_node_tmp1->dt_entry_m->data.board_hw_subtype) & 0xf0000);
                 board_info = (libboot_qcdt_get_hlos_subtype() & 0xf0000);
                 break;
             default:
@@ -653,18 +691,18 @@ static int devtree_delete_incompatible_entries(dt_entry_node_t *dt_list, boot_ui
         }
         switch (dtb_info) {
             case DTB_FOUNDRY:
-                current_info = ((dt_node_tmp1->dt_entry_m->platform_id) & 0x00ff0000);
+                current_info = ((dt_node_tmp1->dt_entry_m->data.platform_id) & 0x00ff0000);
                 break;
             case DTB_PMIC_MODEL:
                 for (i = 0; i < 4; i++) {
-                    current_pmic_model[i] = (dt_node_tmp1->dt_entry_m->pmic_rev[i] & 0xff);
+                    current_pmic_model[i] = (dt_node_tmp1->dt_entry_m->data.pmic_rev[i] & 0xff);
                 }
                 break;
             case DTB_PANEL_TYPE:
-                current_info = ((dt_node_tmp1->dt_entry_m->board_hw_subtype) & 0x1800);
+                current_info = ((dt_node_tmp1->dt_entry_m->data.board_hw_subtype) & 0x1800);
                 break;
             case DTB_BOOT_DEVICE:
-                current_info = ((dt_node_tmp1->dt_entry_m->board_hw_subtype) & 0xf0000);
+                current_info = ((dt_node_tmp1->dt_entry_m->data.board_hw_subtype) & 0xf0000);
                 break;
             default:
                 LOGE("ERROR: Unsupported version (%d) in dt node check \n",
@@ -688,10 +726,10 @@ static int devtree_delete_incompatible_entries(dt_entry_node_t *dt_list, boot_ui
 
         if (delete_current_dt) {
             LOGV("Delete don't fit DTB entry %u/%08x/0x%08x/%x/%x/%x/%x/%x/%p/%x\n",
-                 dt_node_tmp1->dt_entry_m->platform_id, dt_node_tmp1->dt_entry_m->variant_id,
-                 dt_node_tmp1->dt_entry_m->board_hw_subtype, dt_node_tmp1->dt_entry_m->soc_rev,
-                 dt_node_tmp1->dt_entry_m->pmic_rev[0], dt_node_tmp1->dt_entry_m->pmic_rev[1],
-                 dt_node_tmp1->dt_entry_m->pmic_rev[2], dt_node_tmp1->dt_entry_m->pmic_rev[3],
+                 dt_node_tmp1->dt_entry_m->data.platform_id, dt_node_tmp1->dt_entry_m->data.variant_id,
+                 dt_node_tmp1->dt_entry_m->data.board_hw_subtype, dt_node_tmp1->dt_entry_m->data.soc_rev,
+                 dt_node_tmp1->dt_entry_m->data.pmic_rev[0], dt_node_tmp1->dt_entry_m->data.pmic_rev[1],
+                 dt_node_tmp1->dt_entry_m->data.pmic_rev[2], dt_node_tmp1->dt_entry_m->data.pmic_rev[3],
                  dt_node_tmp1->dt_entry_m->dtb_data, dt_node_tmp1->dt_entry_m->dtb_size);
 
             dt_node_tmp2 = (dt_entry_node_t *) dt_node_tmp1->node.prev;
@@ -720,27 +758,27 @@ static int devtree_delete_incompatible_entries2(dt_entry_node_t *dt_list, boot_u
         }
         switch (dtb_info) {
             case DTB_SOC:
-                current_info = dt_node_tmp1->dt_entry_m->soc_rev;
+                current_info = dt_node_tmp1->dt_entry_m->data.soc_rev;
                 board_info = libboot_qcdt_soc_version();
                 break;
             case DTB_MAJOR_MINOR:
-                current_info = ((dt_node_tmp1->dt_entry_m->variant_id) & 0x00ffff00);
+                current_info = ((dt_node_tmp1->dt_entry_m->data.variant_id) & 0x00ffff00);
                 board_info = (libboot_qcdt_target_id() & 0x00ffff00);
                 break;
             case DTB_PMIC0:
-                current_info = ((dt_node_tmp1->dt_entry_m->pmic_rev[0]) & 0x00ffff00);
+                current_info = ((dt_node_tmp1->dt_entry_m->data.pmic_rev[0]) & 0x00ffff00);
                 board_info = (libboot_qcdt_pmic_target(0) & 0x00ffff00);
                 break;
             case DTB_PMIC1:
-                current_info = ((dt_node_tmp1->dt_entry_m->pmic_rev[1]) & 0x00ffff00);
+                current_info = ((dt_node_tmp1->dt_entry_m->data.pmic_rev[1]) & 0x00ffff00);
                 board_info = (libboot_qcdt_pmic_target(1) & 0x00ffff00);
                 break;
             case DTB_PMIC2:
-                current_info = ((dt_node_tmp1->dt_entry_m->pmic_rev[2]) & 0x00ffff00);
+                current_info = ((dt_node_tmp1->dt_entry_m->data.pmic_rev[2]) & 0x00ffff00);
                 board_info = (libboot_qcdt_pmic_target(2) & 0x00ffff00);
                 break;
             case DTB_PMIC3:
-                current_info = ((dt_node_tmp1->dt_entry_m->pmic_rev[3]) & 0x00ffff00);
+                current_info = ((dt_node_tmp1->dt_entry_m->data.pmic_rev[3]) & 0x00ffff00);
                 board_info = (libboot_qcdt_pmic_target(3) & 0x00ffff00);
                 break;
             default:
@@ -758,10 +796,10 @@ static int devtree_delete_incompatible_entries2(dt_entry_node_t *dt_list, boot_u
         }
         if (current_info < best_info) {
             LOGV("Delete don't fit DTB entry %u/%08x/0x%08x/%x/%x/%x/%x/%x/%p/%x\n",
-                 dt_node_tmp1->dt_entry_m->platform_id, dt_node_tmp1->dt_entry_m->variant_id,
-                 dt_node_tmp1->dt_entry_m->board_hw_subtype, dt_node_tmp1->dt_entry_m->soc_rev,
-                 dt_node_tmp1->dt_entry_m->pmic_rev[0], dt_node_tmp1->dt_entry_m->pmic_rev[1],
-                 dt_node_tmp1->dt_entry_m->pmic_rev[2], dt_node_tmp1->dt_entry_m->pmic_rev[3],
+                 dt_node_tmp1->dt_entry_m->data.platform_id, dt_node_tmp1->dt_entry_m->data.variant_id,
+                 dt_node_tmp1->dt_entry_m->data.board_hw_subtype, dt_node_tmp1->dt_entry_m->data.soc_rev,
+                 dt_node_tmp1->dt_entry_m->data.pmic_rev[0], dt_node_tmp1->dt_entry_m->data.pmic_rev[1],
+                 dt_node_tmp1->dt_entry_m->data.pmic_rev[2], dt_node_tmp1->dt_entry_m->data.pmic_rev[3],
                  dt_node_tmp1->dt_entry_m->dtb_data, dt_node_tmp1->dt_entry_m->dtb_size);
 
             dt_node_tmp2 = (dt_entry_node_t *) dt_node_tmp1->node.prev;
@@ -777,22 +815,22 @@ static int devtree_delete_incompatible_entries2(dt_entry_node_t *dt_list, boot_u
         }
         switch (dtb_info) {
             case DTB_SOC:
-                current_info = dt_node_tmp1->dt_entry_m->soc_rev;
+                current_info = dt_node_tmp1->dt_entry_m->data.soc_rev;
                 break;
             case DTB_MAJOR_MINOR:
-                current_info = ((dt_node_tmp1->dt_entry_m->variant_id) & 0x00ffff00);
+                current_info = ((dt_node_tmp1->dt_entry_m->data.variant_id) & 0x00ffff00);
                 break;
             case DTB_PMIC0:
-                current_info = ((dt_node_tmp1->dt_entry_m->pmic_rev[0]) & 0x00ffff00);
+                current_info = ((dt_node_tmp1->dt_entry_m->data.pmic_rev[0]) & 0x00ffff00);
                 break;
             case DTB_PMIC1:
-                current_info = ((dt_node_tmp1->dt_entry_m->pmic_rev[1]) & 0x00ffff00);
+                current_info = ((dt_node_tmp1->dt_entry_m->data.pmic_rev[1]) & 0x00ffff00);
                 break;
             case DTB_PMIC2:
-                current_info = ((dt_node_tmp1->dt_entry_m->pmic_rev[2]) & 0x00ffff00);
+                current_info = ((dt_node_tmp1->dt_entry_m->data.pmic_rev[2]) & 0x00ffff00);
                 break;
             case DTB_PMIC3:
-                current_info = ((dt_node_tmp1->dt_entry_m->pmic_rev[3]) & 0x00ffff00);
+                current_info = ((dt_node_tmp1->dt_entry_m->data.pmic_rev[3]) & 0x00ffff00);
                 break;
             default:
                 LOGE("ERROR: Unsupported version (%d) in dt node check \n",
@@ -802,10 +840,10 @@ static int devtree_delete_incompatible_entries2(dt_entry_node_t *dt_list, boot_u
 
         if (current_info != best_info) {
             LOGV("Delete don't fit DTB entry %u/%08x/0x%08x/%x/%x/%x/%x/%x/%p/%x\n",
-                 dt_node_tmp1->dt_entry_m->platform_id, dt_node_tmp1->dt_entry_m->variant_id,
-                 dt_node_tmp1->dt_entry_m->board_hw_subtype, dt_node_tmp1->dt_entry_m->soc_rev,
-                 dt_node_tmp1->dt_entry_m->pmic_rev[0], dt_node_tmp1->dt_entry_m->pmic_rev[1],
-                 dt_node_tmp1->dt_entry_m->pmic_rev[2], dt_node_tmp1->dt_entry_m->pmic_rev[3],
+                 dt_node_tmp1->dt_entry_m->data.platform_id, dt_node_tmp1->dt_entry_m->data.variant_id,
+                 dt_node_tmp1->dt_entry_m->data.board_hw_subtype, dt_node_tmp1->dt_entry_m->data.soc_rev,
+                 dt_node_tmp1->dt_entry_m->data.pmic_rev[0], dt_node_tmp1->dt_entry_m->data.pmic_rev[1],
+                 dt_node_tmp1->dt_entry_m->data.pmic_rev[2], dt_node_tmp1->dt_entry_m->data.pmic_rev[3],
                  dt_node_tmp1->dt_entry_m->dtb_data, dt_node_tmp1->dt_entry_m->dtb_size);
 
             dt_node_tmp2 = (dt_entry_node_t *) dt_node_tmp1->node.prev;
@@ -925,23 +963,23 @@ int libboot_qcdt_get_entry_info(dt_table_t *table, dt_entry_local_t *dt_entry_in
         switch (table->version) {
             case DEV_TREE_VERSION_V1:
                 dt_entry_v1 = (dt_entry_v1_t *)table_ptr;
-                cur_dt_entry->platform_id = dt_entry_v1->platform_id;
-                cur_dt_entry->variant_id = dt_entry_v1->variant_id;
-                cur_dt_entry->soc_rev = dt_entry_v1->soc_rev;
-                cur_dt_entry->board_hw_subtype = (dt_entry_v1->variant_id >> 0x18);
-                cur_dt_entry->pmic_rev[0] = libboot_qcdt_pmic_target(0);
-                cur_dt_entry->pmic_rev[1] = libboot_qcdt_pmic_target(1);
-                cur_dt_entry->pmic_rev[2] = libboot_qcdt_pmic_target(2);
-                cur_dt_entry->pmic_rev[3] = libboot_qcdt_pmic_target(3);
+                cur_dt_entry->data.platform_id = dt_entry_v1->platform_id;
+                cur_dt_entry->data.variant_id = dt_entry_v1->variant_id;
+                cur_dt_entry->data.soc_rev = dt_entry_v1->soc_rev;
+                cur_dt_entry->data.board_hw_subtype = (dt_entry_v1->variant_id >> 0x18);
+                cur_dt_entry->data.pmic_rev[0] = libboot_qcdt_pmic_target(0);
+                cur_dt_entry->data.pmic_rev[1] = libboot_qcdt_pmic_target(1);
+                cur_dt_entry->data.pmic_rev[2] = libboot_qcdt_pmic_target(2);
+                cur_dt_entry->data.pmic_rev[3] = libboot_qcdt_pmic_target(3);
                 cur_dt_entry->dtb_data = ((boot_uint8_t *)table) + dt_entry_v1->offset;
                 cur_dt_entry->dtb_size = dt_entry_v1->size;
                 table_ptr += sizeof(dt_entry_v1_t);
                 break;
             case DEV_TREE_VERSION_V2:
                 dt_entry_v2 = (dt_entry_v2_t *)table_ptr;
-                cur_dt_entry->platform_id = dt_entry_v2->platform_id;
-                cur_dt_entry->variant_id = dt_entry_v2->variant_id;
-                cur_dt_entry->soc_rev = dt_entry_v2->soc_rev;
+                cur_dt_entry->data.platform_id = dt_entry_v2->platform_id;
+                cur_dt_entry->data.variant_id = dt_entry_v2->variant_id;
+                cur_dt_entry->data.soc_rev = dt_entry_v2->soc_rev;
                 /* For V2 version of DTBs we have platform version field as part
                  * of variant ID, in such case the subtype will be mentioned as 0x0
                  * As the qcom, board-id = <0xSSPMPmPH, 0x0>
@@ -953,28 +991,28 @@ int libboot_qcdt_get_entry_info(dt_table_t *table, dt_entry_local_t *dt_entry_in
                  * from variant_id to subtype field
                  */
                 if (dt_entry_v2->board_hw_subtype == 0)
-                    cur_dt_entry->board_hw_subtype = (cur_dt_entry->variant_id >> 0x18);
+                    cur_dt_entry->data.board_hw_subtype = (cur_dt_entry->data.variant_id >> 0x18);
                 else
-                    cur_dt_entry->board_hw_subtype = dt_entry_v2->board_hw_subtype;
-                cur_dt_entry->pmic_rev[0] = libboot_qcdt_pmic_target(0);
-                cur_dt_entry->pmic_rev[1] = libboot_qcdt_pmic_target(1);
-                cur_dt_entry->pmic_rev[2] = libboot_qcdt_pmic_target(2);
-                cur_dt_entry->pmic_rev[3] = libboot_qcdt_pmic_target(3);
+                    cur_dt_entry->data.board_hw_subtype = dt_entry_v2->board_hw_subtype;
+                cur_dt_entry->data.pmic_rev[0] = libboot_qcdt_pmic_target(0);
+                cur_dt_entry->data.pmic_rev[1] = libboot_qcdt_pmic_target(1);
+                cur_dt_entry->data.pmic_rev[2] = libboot_qcdt_pmic_target(2);
+                cur_dt_entry->data.pmic_rev[3] = libboot_qcdt_pmic_target(3);
                 cur_dt_entry->dtb_data = ((boot_uint8_t *)table) + dt_entry_v2->offset;;
                 cur_dt_entry->dtb_size = dt_entry_v2->size;
                 table_ptr += sizeof(dt_entry_v2_t);
                 break;
             case DEV_TREE_VERSION_V3:
                 dt_entry_v3 = (dt_entry_t *)table_ptr;
-                cur_dt_entry->platform_id = dt_entry_v3->platform_id;
-                cur_dt_entry->variant_id = dt_entry_v3->variant_id;
-                cur_dt_entry->board_hw_subtype = dt_entry_v3->board_hw_subtype;
-                cur_dt_entry->soc_rev = dt_entry_v3->soc_rev;
+                cur_dt_entry->data.platform_id = dt_entry_v3->platform_id;
+                cur_dt_entry->data.variant_id = dt_entry_v3->variant_id;
+                cur_dt_entry->data.board_hw_subtype = dt_entry_v3->board_hw_subtype;
+                cur_dt_entry->data.soc_rev = dt_entry_v3->soc_rev;
 
-                cur_dt_entry->pmic_rev[0] = dt_entry_v3->pmic_rev[0];
-                cur_dt_entry->pmic_rev[1] = dt_entry_v3->pmic_rev[1];
-                cur_dt_entry->pmic_rev[2] = dt_entry_v3->pmic_rev[2];
-                cur_dt_entry->pmic_rev[3] = dt_entry_v3->pmic_rev[3];
+                cur_dt_entry->data.pmic_rev[0] = dt_entry_v3->pmic_rev[0];
+                cur_dt_entry->data.pmic_rev[1] = dt_entry_v3->pmic_rev[1];
+                cur_dt_entry->data.pmic_rev[2] = dt_entry_v3->pmic_rev[2];
+                cur_dt_entry->data.pmic_rev[3] = dt_entry_v3->pmic_rev[3];
 
                 cur_dt_entry->dtb_data = ((boot_uint8_t *)table) + dt_entry_v3->offset;
                 cur_dt_entry->dtb_size = dt_entry_v3->size;
@@ -989,8 +1027,8 @@ int libboot_qcdt_get_entry_info(dt_table_t *table, dt_entry_local_t *dt_entry_in
                  * In such case to make it compatible with LK algorithm move the subtype
                  * from variant_id to subtype field
                  */
-                if (cur_dt_entry->board_hw_subtype == 0)
-                    cur_dt_entry->board_hw_subtype = (cur_dt_entry->variant_id >> 0x18);
+                if (cur_dt_entry->data.board_hw_subtype == 0)
+                    cur_dt_entry->data.board_hw_subtype = (cur_dt_entry->data.variant_id >> 0x18);
 
                 table_ptr += sizeof(dt_entry_t);
                 break;
@@ -1015,19 +1053,19 @@ int libboot_qcdt_get_entry_info(dt_table_t *table, dt_entry_local_t *dt_entry_in
 
     if (found != 0) {
         LOGI("Using DTB entry 0x%08x/%08x/0x%08x/%u for device 0x%08x/%08x/0x%08x/%u\n",
-             dt_entry_info->platform_id, dt_entry_info->soc_rev,
-             dt_entry_info->variant_id, dt_entry_info->board_hw_subtype,
+             dt_entry_info->data.platform_id, dt_entry_info->data.soc_rev,
+             dt_entry_info->data.variant_id, dt_entry_info->data.board_hw_subtype,
              libboot_qcdt_platform_id(), libboot_qcdt_soc_version(),
              libboot_qcdt_target_id(), libboot_qcdt_hardware_subtype());
-        if (dt_entry_info->pmic_rev[0] == 0 && dt_entry_info->pmic_rev[0] == 0 &&
-                dt_entry_info->pmic_rev[0] == 0 && dt_entry_info->pmic_rev[0] == 0) {
+        if (dt_entry_info->data.pmic_rev[0] == 0 && dt_entry_info->data.pmic_rev[0] == 0 &&
+                dt_entry_info->data.pmic_rev[0] == 0 && dt_entry_info->data.pmic_rev[0] == 0) {
             LOGV("No maintain pmic info in DTB, device pmic info is 0x%0x/0x%x/0x%x/0x%0x\n",
                  libboot_qcdt_pmic_target(0), libboot_qcdt_pmic_target(1),
                  libboot_qcdt_pmic_target(2), libboot_qcdt_pmic_target(3));
         } else {
             LOGI("Using pmic info 0x%0x/0x%x/0x%x/0x%0x for device 0x%0x/0x%x/0x%x/0x%0x\n",
-                 dt_entry_info->pmic_rev[0], dt_entry_info->pmic_rev[1],
-                 dt_entry_info->pmic_rev[2], dt_entry_info->pmic_rev[3],
+                 dt_entry_info->data.pmic_rev[0], dt_entry_info->data.pmic_rev[1],
+                 dt_entry_info->data.pmic_rev[2], dt_entry_info->data.pmic_rev[3],
                  libboot_qcdt_pmic_target(0), libboot_qcdt_pmic_target(1),
                  libboot_qcdt_pmic_target(2), libboot_qcdt_pmic_target(3));
         }
