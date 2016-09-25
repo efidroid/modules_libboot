@@ -38,7 +38,7 @@ static int devtree_delete_incompatible_entries2(dt_entry_node_t *dt_list, boot_u
 /* Add function to allocate dt entry list, used for recording
 *  the entry which conform to devtree_entry_add_if_excact_match()
 */
-static dt_entry_node_t *dt_entry_node_create(void)
+static dt_entry_node_t *dt_entry_list_alloc_node(void)
 {
     dt_entry_node_t *dt_node_member = NULL;
 
@@ -54,7 +54,7 @@ static dt_entry_node_t *dt_entry_node_create(void)
     return dt_node_member;
 }
 
-static void insert_dt_entry_in_queue(dt_entry_node_t *dt_list, dt_entry_node_t *dt_node_member)
+static void dt_entry_list_insert(dt_entry_node_t *dt_list, dt_entry_node_t *dt_node_member)
 {
     libboot_list_add_tail(&dt_list->node, &dt_node_member->node);
 }
@@ -68,13 +68,13 @@ static void dt_entry_list_delete(dt_entry_node_t *dt_node_member)
     }
 }
 
-static void free_dt_entry_queue(dt_entry_node_t *dt_entry_queue)
+static void dt_entry_list_free(dt_entry_node_t *dt_list)
 {
-    while (!libboot_list_is_empty(&dt_entry_queue->node)) {
-        dt_entry_node_t *dt_node = libboot_list_remove_tail_type(&dt_entry_queue->node, dt_entry_node_t, node);
+    while (!libboot_list_is_empty(&dt_list->node)) {
+        dt_entry_node_t *dt_node = libboot_list_remove_tail_type(&dt_list->node, dt_entry_node_t, node);
         dt_entry_list_delete(dt_node);
     }
-    libboot_free(dt_entry_queue);
+    libboot_free(dt_list);
 }
 
 static int libboot_qcdt_add_compatible_entries(void *dtb, boot_uint32_t dtb_size, dt_entry_node_t *dtb_list)
@@ -446,7 +446,7 @@ void *libboot_qcdt_appended(void *fdt, boot_uintn_t fdt_size)
     }
 
     /* libboot_free queue's memory */
-    free_dt_entry_queue(dt_entry_queue);
+    dt_entry_list_free(dt_entry_queue);
 
     if (bestmatch_tag) {
         return bestmatch_tag;
@@ -531,7 +531,7 @@ static int devtree_entry_add_if_excact_match(dt_entry_local_t *cur_dt_entry, dt_
             ((cur_dt_entry->pmic_rev[2] & 0x00ffff00) <= (libboot_qcdt_pmic_target(2) & 0x00ffff00)) &&
             ((cur_dt_entry->pmic_rev[3] & 0x00ffff00) <= (libboot_qcdt_pmic_target(3) & 0x00ffff00))) {
 
-        dt_node_tmp = dt_entry_node_create();
+        dt_node_tmp = dt_entry_list_alloc_node();
         libboot_platform_memmove((char *)dt_node_tmp->dt_entry_m,(char *)cur_dt_entry, sizeof(dt_entry_local_t));
 
         LOGV("Add DTB entry %u/%08x/0x%08x/%x/%x/%x/%x/%x/%p/%x\n",
@@ -541,7 +541,7 @@ static int devtree_entry_add_if_excact_match(dt_entry_local_t *cur_dt_entry, dt_
              dt_node_tmp->dt_entry_m->pmic_rev[2], dt_node_tmp->dt_entry_m->pmic_rev[3],
              dt_node_tmp->dt_entry_m->dtb_data, dt_node_tmp->dt_entry_m->dtb_size);
 
-        insert_dt_entry_in_queue(dt_list, dt_node_tmp);
+        dt_entry_list_insert(dt_list, dt_node_tmp);
         return 1;
     }
     return 0;
@@ -965,7 +965,7 @@ int libboot_qcdt_get_entry_info(dt_table_t *table, dt_entry_local_t *dt_entry_in
             default:
                 LOGE("ERROR: Unsupported version (%d) in DT table \n",
                      table->version);
-                free_dt_entry_queue(dt_entry_queue);
+                dt_entry_list_free(dt_entry_queue);
                 return -1;
         }
 
@@ -999,7 +999,7 @@ int libboot_qcdt_get_entry_info(dt_table_t *table, dt_entry_local_t *dt_entry_in
                  libboot_qcdt_pmic_target(0), libboot_qcdt_pmic_target(1),
                  libboot_qcdt_pmic_target(2), libboot_qcdt_pmic_target(3));
         }
-        free_dt_entry_queue(dt_entry_queue);
+        dt_entry_list_free(dt_entry_queue);
         return 0;
     }
 
@@ -1007,6 +1007,6 @@ int libboot_qcdt_get_entry_info(dt_table_t *table, dt_entry_local_t *dt_entry_in
          libboot_qcdt_platform_id(), libboot_qcdt_soc_version(),
          libboot_qcdt_target_id(), libboot_qcdt_hardware_subtype());
 
-    free_dt_entry_queue(dt_entry_queue);
+    dt_entry_list_free(dt_entry_queue);
     return -1;
 }
