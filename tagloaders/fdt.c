@@ -173,7 +173,7 @@ int fdtloader_process_multifdt(bootimg_context_t *context)
     int rc;
 
     // get pointer to compatible fdt
-    void *fdt = libboot_qcdt_appended(context->tags_data, context->tags_size);
+    void *fdt = libboot_qcdt_appended(context->tags_data, context->tags_size, context->fdt_parser);
     if (!fdt) return -1;
 
     // check fdt header

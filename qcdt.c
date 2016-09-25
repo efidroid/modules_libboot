@@ -89,7 +89,7 @@ void dt_entry_list_free(dt_entry_node_t *dt_list)
     libboot_free(dt_list);
 }
 
-int libboot_qcdt_generate_entries(void *dtb, boot_uint32_t dtb_size, dt_entry_node_t *dtb_list, dt_entry_add_cb_t cb)
+int libboot_qcdt_generate_entries(void *dtb, boot_uint32_t dtb_size, dt_entry_node_t *dtb_list, dt_entry_add_cb_t cb, const char *parser)
 {
     int root_offset;
     const void *prop = NULL;
@@ -374,8 +374,8 @@ static void generate_entries_add_cb(dt_entry_local_t *dt_entry, dt_entry_node_t 
     }
 }
 
-static int libboot_qcdt_add_compatible_entries(void *dtb, boot_uint32_t dtb_size, dt_entry_node_t *dtb_list) {
-    return libboot_qcdt_generate_entries(dtb, dtb_size, dtb_list, generate_entries_add_cb);
+static int libboot_qcdt_add_compatible_entries(void *dtb, boot_uint32_t dtb_size, dt_entry_node_t *dtb_list, const char *parser) {
+    return libboot_qcdt_generate_entries(dtb, dtb_size, dtb_list, generate_entries_add_cb, parser);
 }
 
 /*
@@ -389,7 +389,7 @@ static int libboot_qcdt_add_compatible_entries(void *dtb, boot_uint32_t dtb_size
  * Return Value: DTB address : If appended device tree is found
  *               'NULL'         : Otherwise
  */
-void *libboot_qcdt_appended(void *fdt, boot_uintn_t fdt_size)
+void *libboot_qcdt_appended(void *fdt, boot_uintn_t fdt_size, const char *parser)
 {
     void *fdt_end = fdt + fdt_size;
     void *dtb = NULL;
@@ -420,7 +420,7 @@ void *libboot_qcdt_appended(void *fdt, boot_uintn_t fdt_size)
             break;
         dtb_size = fdt_totalsize(&dtb_hdr);
 
-        libboot_qcdt_add_compatible_entries(dtb, dtb_size, dt_entry_queue);
+        libboot_qcdt_add_compatible_entries(dtb, dtb_size, dt_entry_queue, parser);
 
         /* goto the next device tree if any */
         dtb += dtb_size;

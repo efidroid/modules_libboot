@@ -154,6 +154,6 @@ void dt_entry_list_free(dt_entry_node_t *dt_list);
 
 int libboot_qcdt_validate(dt_table_t *table, boot_uint32_t *dt_hdr_size);
 int libboot_qcdt_get_entry_info(dt_table_t *table, dt_entry_local_t *dt_entry_info);
-void *libboot_qcdt_appended(void *fdt, boot_uintn_t fdt_size);
-int libboot_qcdt_generate_entries(void *dtb, boot_uint32_t dtb_size, dt_entry_node_t *dtb_list, dt_entry_add_cb_t cb);
+void *libboot_qcdt_appended(void *fdt, boot_uintn_t fdt_size, const char *parser);
+int libboot_qcdt_generate_entries(void *dtb, boot_uint32_t dtb_size, dt_entry_node_t *dtb_list, dt_entry_add_cb_t cb, const char *parser);
 #endif // LIB_BOOT_QCDT_H
