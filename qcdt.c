@@ -34,9 +34,28 @@
 
 #define __WEAK __attribute__((weak))
 
+typedef enum {
+    FDT_PARSER_UNKNOWN = -1,
+    FDT_PARSER_QCOM = 0,
+    FDT_PARSER_QCOM_LGE,
+    FDT_PARSER_QCOM_OPPO,
+} fdt_parser_t;
+
 static int devtree_entry_add_if_excact_match(dt_entry_local_t *cur_dt_entry, dt_entry_node_t *dt_list);
 static dt_entry_local_t *devtree_get_best_entry(dt_entry_node_t *dt_list);
 static int devtree_delete_incompatible_entries2(dt_entry_node_t *dt_list, boot_uint32_t dtb_info);
+
+__WEAK boot_uint32_t libboot_qcdt_get_lge_rev(void) {
+    return 0;
+}
+
+__WEAK boot_uint32_t libboot_qcdt_get_oppo_id0(void) {
+    return 0;
+}
+
+__WEAK boot_uint32_t libboot_qcdt_get_oppo_id1(void) {
+    return 0;
+}
 
 /* Add function to allocate dt entry list, used for recording
 *  the entry which conform to devtree_entry_add_if_excact_match()
@@ -91,13 +110,6 @@ void dt_entry_list_free(dt_entry_node_t *dt_list)
     }
     libboot_free(dt_list);
 }
-
-typedef enum {
-    FDT_PARSER_UNKNOWN = -1,
-    FDT_PARSER_QCOM = 0,
-    FDT_PARSER_QCOM_LGE,
-    FDT_PARSER_QCOM_OPPO,
-} fdt_parser_t;
 
 static fdt_parser_t libboot_qcdt_get_parser(const char * parser) {
     if(!parser)
@@ -572,18 +584,6 @@ int libboot_qcdt_validate(dt_table_t *table, boot_uint32_t *dt_hdr_size)
     else
         *dt_hdr_size = hdr_size & UINT_MAX;
 
-    return 0;
-}
-
-__WEAK boot_uint32_t libboot_qcdt_get_lge_rev(void) {
-    return 0;
-}
-
-__WEAK boot_uint32_t libboot_qcdt_get_oppo_id0(void) {
-    return 0;
-}
-
-__WEAK boot_uint32_t libboot_qcdt_get_oppo_id1(void) {
     return 0;
 }
 
