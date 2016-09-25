@@ -163,6 +163,7 @@ static boot_uintn_t fdtloader_fdt_count(void *fdt, boot_uintn_t size)
 
         // next
         fdt += fdtsize;
+        i++;
     }
 
     return i;
