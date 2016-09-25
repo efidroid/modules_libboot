@@ -68,6 +68,18 @@ static void dt_entry_list_delete(dt_entry_node_t *dt_node_member)
     }
 }
 
+static dt_entry_node_t *dt_entry_list_create(void)
+{
+    dt_entry_node_t *dt_list = (dt_entry_node_t *) libboot_alloc(sizeof(dt_entry_node_t));
+    if (!dt_list)
+        return NULL;
+
+    libboot_list_initialize(&dt_list->node);
+    dt_list->dt_entry_m = NULL;
+
+    return dt_list;
+}
+
 static void dt_entry_list_free(dt_entry_node_t *dt_list)
 {
     while (!libboot_list_is_empty(&dt_list->node)) {
@@ -400,14 +412,12 @@ void *libboot_qcdt_appended(void *fdt, boot_uintn_t fdt_size)
 
 
     /* Initialize the dtb entry node*/
-    dt_entry_queue = (dt_entry_node_t *)
-                     libboot_alloc(sizeof(dt_entry_node_t));
+    dt_entry_queue = dt_entry_list_create();
 
     if (!dt_entry_queue) {
         LOGE("Out of memory\n");
         return NULL;
     }
-    libboot_list_initialize(&dt_entry_queue->node);
 
     dtb = fdt;
     while (((uintptr_t)dtb + sizeof(struct fdt_header)) < (uintptr_t)fdt_end) {
@@ -879,14 +889,13 @@ int libboot_qcdt_get_entry_info(dt_table_t *table, dt_entry_local_t *dt_entry_in
     table_ptr = (unsigned char *)table + DEV_TREE_HEADER_SIZE;
     cur_dt_entry = &dt_entry_buf_1;
     best_match_dt_entry = NULL;
-    dt_entry_queue = (dt_entry_node_t *) libboot_alloc(sizeof(dt_entry_node_t));
+    dt_entry_queue = dt_entry_list_create();
 
     if (!dt_entry_queue) {
         LOGE("Out of memory\n");
         return -1;
     }
 
-    libboot_list_initialize(&dt_entry_queue->node);
     LOGI("DTB Total entry: %d, DTB version: %d\n", table->num_entries, table->version);
     for (i = 0; found == 0 && i < table->num_entries; i++) {
         libboot_platform_memset(cur_dt_entry, 0, sizeof(dt_entry_local_t));
