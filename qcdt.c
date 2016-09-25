@@ -133,9 +133,9 @@ int libboot_qcdt_generate_entries(void *dtb, boot_uint32_t dtb_size, dt_entry_no
     boot_uint32_t dtb_ver;
     boot_uint32_t num_entries = 0;
     boot_uint32_t i, j, k, n;
-    boot_uint32_t msm_data_count;
-    boot_uint32_t board_data_count;
-    boot_uint32_t pmic_data_count;
+    boot_uint32_t msm_data_count = 0;
+    boot_uint32_t board_data_count = 0;
+    boot_uint32_t pmic_data_count = 0;
     fdt_parser_t parser;
 
     parser = libboot_qcdt_get_parser(sparser);
@@ -260,10 +260,13 @@ int libboot_qcdt_generate_entries(void *dtb, boot_uint32_t dtb_size, dt_entry_no
      * Extract the data & prepare a look up table
      */
     else if (dtb_ver == DEV_TREE_VERSION_V2 || dtb_ver == DEV_TREE_VERSION_V3) {
-        board_data_count = (len_board_id / len_board_id_item);
-        msm_data_count = (len_plat_id / len_plat_id_item);
+        if (len_board_id_item>0)
+            board_data_count = (len_board_id / len_board_id_item);
+        if (len_plat_id_item>0)
+            msm_data_count = (len_plat_id / len_plat_id_item);
         /* If dtb version is v2.0, the pmic_data_count will be <= 0 */
-        pmic_data_count = (len_pmic_id / len_pmic_id_item);
+        if (len_pmic_id_item>0)
+            pmic_data_count = (len_pmic_id / len_pmic_id_item);
 
         /* If we are using dtb v3.0, then we have split board, msm & pmic data in the DTB
         *  If we are using dtb v2.0, then we have split board & msmdata in the DTB
