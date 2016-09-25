@@ -128,17 +128,17 @@ static int ldrmodule_load(bootimg_context_t *context, boot_uintn_t type, boot_ui
     }
 
     // get size
-    boot_uint32_t *size = context->kernel_data - sizeof(*size);
+    boot_uint32_t size = 50*1024*1024;
 
     // allocate data
-    data = libboot_internal_io_alloc(context->io, *size);
+    data = libboot_internal_io_alloc(context->io, size);
     if (!data) {
         rc = -1;
         goto out;
     }
 
     // extract
-    rc = decompress(context->kernel_data, context->kernel_size, data, *size, &pos, &out_len);
+    rc = decompress(context->kernel_data, context->kernel_size, data, size, &pos, &out_len);
     if (rc) {
         goto out_free;
     }
