@@ -93,6 +93,8 @@ typedef struct {
 
     void* dtb_data;
     boot_uint32_t dtb_size;
+
+    boot_uint32_t lge_rev;
 } dt_entry_local_t;
 
 typedef struct {

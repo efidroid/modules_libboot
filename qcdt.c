@@ -89,7 +89,25 @@ void dt_entry_list_free(dt_entry_node_t *dt_list)
     libboot_free(dt_list);
 }
 
-int libboot_qcdt_generate_entries(void *dtb, boot_uint32_t dtb_size, dt_entry_node_t *dtb_list, dt_entry_add_cb_t cb, const char *parser)
+typedef enum {
+    FDT_PARSER_UNKNOWN = -1,
+    FDT_PARSER_QCOM = 0,
+    FDT_PARSER_QCOM_LGE,
+    FDT_PARSER_QCOM_OPPO,
+} fdt_parser_t;
+
+static fdt_parser_t libboot_qcdt_get_parser(const char * parser) {
+    if(!strcmp(parser, "qcom"))
+        return FDT_PARSER_QCOM;
+    if(!strcmp(parser, "qcom_lge"))
+        return FDT_PARSER_QCOM_LGE;
+    if(!strcmp(parser, "qcom_oppo"))
+        return FDT_PARSER_QCOM_OPPO;
+
+    return FDT_PARSER_UNKNOWN;
+}
+
+int libboot_qcdt_generate_entries(void *dtb, boot_uint32_t dtb_size, dt_entry_node_t *dtb_list, dt_entry_add_cb_t cb, const char *sparser)
 {
     int root_offset;
     const void *prop = NULL;
@@ -105,7 +123,7 @@ int libboot_qcdt_generate_entries(void *dtb, boot_uint32_t dtb_size, dt_entry_no
     int len;
     int len_board_id;
     int len_plat_id;
-    int min_plat_id_len = 0;
+    int len_plat_id_item = 0;
     int len_pmic_id;
     boot_uint32_t dtb_ver;
     boot_uint32_t num_entries = 0;
@@ -113,6 +131,13 @@ int libboot_qcdt_generate_entries(void *dtb, boot_uint32_t dtb_size, dt_entry_no
     boot_uint32_t msm_data_count;
     boot_uint32_t board_data_count;
     boot_uint32_t pmic_data_count;
+    fdt_parser_t parser;
+
+    parser = libboot_qcdt_get_parser(sparser);
+    if (parser==FDT_PARSER_UNKNOWN) {
+        LOGE("unknown parser: %s\n", sparser);
+        return 0;
+    }
 
     root_offset = fdt_path_offset(dtb, "/");
     if (root_offset < 0)
@@ -138,7 +163,7 @@ int libboot_qcdt_generate_entries(void *dtb, boot_uint32_t dtb_size, dt_entry_no
             return 0;
         }
         dtb_ver = DEV_TREE_VERSION_V3;
-        min_plat_id_len = PLAT_ID_SIZE;
+        len_plat_id_item = PLAT_ID_SIZE;
     } else if (board_prop && len_board_id > 0) {
         if (len_board_id % BOARD_ID_SIZE) {
             LOGE("qcom,board-id in device tree is (%d) not a multiple of (%d)\n",
@@ -146,10 +171,14 @@ int libboot_qcdt_generate_entries(void *dtb, boot_uint32_t dtb_size, dt_entry_no
             return 0;
         }
         dtb_ver = DEV_TREE_VERSION_V2;
-        min_plat_id_len = PLAT_ID_SIZE;
+        len_plat_id_item = PLAT_ID_SIZE;
     } else {
         dtb_ver = DEV_TREE_VERSION_V1;
-        min_plat_id_len = DT_ENTRY_V1_SIZE;
+        len_plat_id_item = DT_ENTRY_V1_SIZE;
+
+        if(parser==FDT_PARSER_QCOM_LGE) {
+            len_plat_id_item = 4 * sizeof(boot_uint32_t);
+        }
     }
 
     /* Get the msm-id prop from DTB */
@@ -157,9 +186,9 @@ int libboot_qcdt_generate_entries(void *dtb, boot_uint32_t dtb_size, dt_entry_no
     if (!plat_prop || len_plat_id <= 0) {
         LOGI("qcom,msm-id entry not found\n");
         return 0;
-    } else if (len_plat_id % min_plat_id_len) {
+    } else if (len_plat_id % len_plat_id_item) {
         LOGI("qcom,msm-id in device tree is (%d) not a multiple of (%d)\n",
-             len_plat_id, min_plat_id_len);
+             len_plat_id, len_plat_id_item);
         return 0;
     }
 
@@ -193,10 +222,14 @@ int libboot_qcdt_generate_entries(void *dtb, boot_uint32_t dtb_size, dt_entry_no
             cur_dt_entry->dtb_data = dtb;
             cur_dt_entry->dtb_size = dtb_size;
 
+            if(parser==FDT_PARSER_QCOM_LGE) {
+                cur_dt_entry->lge_rev = fdt32_to_cpu(*((boot_uint32_t*)(plat_prop + 3*sizeof(boot_uint32_t))));
+            }
+
             cb(cur_dt_entry, dtb_list, model);
 
-            plat_prop += DT_ENTRY_V1_SIZE;
-            len_plat_id -= DT_ENTRY_V1_SIZE;
+            plat_prop += len_plat_id_item;
+            len_plat_id -= len_plat_id_item;
         }
         libboot_free(cur_dt_entry);
 
