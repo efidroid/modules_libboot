@@ -117,9 +117,7 @@ void dt_entry_list_free(dt_entry_node_t *dt_list)
 
 static fdt_parser_t libboot_qcdt_get_parser(const char * parser) {
     if(!parser)
-        parser = libboot_qcdt_get_default_parser();
-    if(!parser)
-        return FDT_PARSER_QCOM;
+        return FDT_PARSER_UNKNOWN;
 
     if(!libboot_platform_strcmp(parser, "qcom"))
         return FDT_PARSER_QCOM;
@@ -158,6 +156,12 @@ int libboot_qcdt_generate_entries(void *dtb, boot_uint32_t dtb_size, dt_entry_no
     boot_uint32_t board_data_count = 0;
     boot_uint32_t pmic_data_count = 0;
     fdt_parser_t parser;
+
+    // use default parser
+    if(!sparser)
+        sparser = libboot_qcdt_get_default_parser();
+    if(!sparser)
+        sparser = "qcom";
 
     parser = libboot_qcdt_get_parser(sparser);
     if (parser==FDT_PARSER_UNKNOWN) {
