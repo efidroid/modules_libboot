@@ -32,6 +32,8 @@
 #include <lib/boot/internal/qcdt.h>
 #include <libfdt.h>
 
+#define __WEAK __attribute__((weak))
+
 static int devtree_entry_add_if_excact_match(dt_entry_local_t *cur_dt_entry, dt_entry_node_t *dt_list);
 static dt_entry_local_t *devtree_get_best_entry(dt_entry_node_t *dt_list);
 static int devtree_delete_incompatible_entries2(dt_entry_node_t *dt_list, boot_uint32_t dtb_info);
@@ -567,6 +569,18 @@ int libboot_qcdt_validate(dt_table_t *table, boot_uint32_t *dt_hdr_size)
     return 0;
 }
 
+__WEAK boot_uint32_t libboot_qcdt_get_lge_rev(void) {
+    return 0;
+}
+
+__WEAK boot_uint32_t libboot_qcdt_get_oppo_id0(void) {
+    return 0;
+}
+
+__WEAK boot_uint32_t libboot_qcdt_get_oppo_id1(void) {
+    return 0;
+}
+
 static int devtree_entry_add_if_excact_match(dt_entry_local_t *cur_dt_entry, dt_entry_node_t *dt_list)
 {
     boot_uint32_t cur_dt_hlos_ddr;
@@ -605,6 +619,21 @@ static int devtree_entry_add_if_excact_match(dt_entry_local_t *cur_dt_entry, dt_
         dt_node_tmp = dt_entry_list_alloc_node();
         libboot_platform_memmove((char *)dt_node_tmp->dt_entry_m,(char *)cur_dt_entry, sizeof(dt_entry_local_t));
 
+        if(!libboot_platform_strcmp(cur_dt_entry->parser, "qcom_oppo")) {
+            if(cur_dt_entry->data.u.oppo.id0!=libboot_qcdt_get_oppo_id0()) {
+                goto incompatible_entry;
+            }
+            if(cur_dt_entry->data.u.oppo.id1!=libboot_qcdt_get_oppo_id1()) {
+                goto incompatible_entry;
+            }
+        }
+
+        if(!libboot_platform_strcmp(cur_dt_entry->parser, "qcom_lge")) {
+            if(cur_dt_entry->data.u.lge.lge_rev!=libboot_qcdt_get_lge_rev()) {
+                goto incompatible_entry;
+            }
+        }
+
         LOGV("Add DTB entry %u/%08x/0x%08x/%x/%x/%x/%x/%x/%p/%x\n",
              dt_node_tmp->dt_entry_m->data.platform_id, dt_node_tmp->dt_entry_m->data.variant_id,
              dt_node_tmp->dt_entry_m->data.board_hw_subtype, dt_node_tmp->dt_entry_m->data.soc_rev,
@@ -615,6 +644,8 @@ static int devtree_entry_add_if_excact_match(dt_entry_local_t *cur_dt_entry, dt_
         dt_entry_list_insert(dt_list, dt_node_tmp);
         return 1;
     }
+
+incompatible_entry:
     return 0;
 }
 
