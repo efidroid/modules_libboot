@@ -22,6 +22,8 @@ add_library(boot
     tagloaders/atags.c
     tagloaders/fdt.c
     tagloaders/qcdt.c
+
+    platforms/posix/platform.c
 )
 include_directories(
     include
@@ -31,6 +33,5 @@ include_directories(
 
 add_executable(libboot_test
     test/main.c
-    platforms/posix/platform.c
 )
 target_link_libraries(libboot_test boot fdt z)
