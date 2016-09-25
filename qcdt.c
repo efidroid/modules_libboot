@@ -57,6 +57,10 @@ __WEAK boot_uint32_t libboot_qcdt_get_oppo_id1(void) {
     return 0;
 }
 
+__WEAK const char *libboot_qcdt_get_default_parser(void) {
+    return NULL;
+}
+
 /* Add function to allocate dt entry list, used for recording
 *  the entry which conform to devtree_entry_add_if_excact_match()
 */
@@ -112,6 +116,8 @@ void dt_entry_list_free(dt_entry_node_t *dt_list)
 }
 
 static fdt_parser_t libboot_qcdt_get_parser(const char * parser) {
+    if(!parser)
+        parser = libboot_qcdt_get_default_parser();
     if(!parser)
         return FDT_PARSER_QCOM;
 
