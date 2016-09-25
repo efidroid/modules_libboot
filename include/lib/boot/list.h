@@ -23,6 +23,12 @@
 #ifndef LIB_BOOT_INTERNAL_LIST_H
 #define LIB_BOOT_INTERNAL_LIST_H
 
+struct libboot_list_node {
+    struct libboot_list_node *prev;
+    struct libboot_list_node *next;
+};
+typedef struct libboot_list_node libboot_list_node_t;
+
 #define libboot_containerof(ptr, type, member) \
     ((type *)((boot_uintn_t)(ptr) - LIBBOOT_OFFSETOF(type, member)))
 #define LIBBOOT_LIST_INITIAL_VALUE(list) { &(list), &(list) }
