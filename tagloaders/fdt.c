@@ -16,7 +16,7 @@
 
 #include <lib/boot.h>
 #include <lib/boot/internal/boot_internal.h>
-#include <lib/boot/internal/qcdt.h>
+#include <lib/boot/qcdt.h>
 #include <libfdt.h>
 
 #define DTB_PAD_SIZE (1*1024*1024)

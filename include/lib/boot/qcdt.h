@@ -26,8 +26,8 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef LIB_BOOT_INTERNAL_QCDT_H
-#define LIB_BOOT_INTERNAL_QCDT_H
+#ifndef LIB_BOOT_QCDT_H
+#define LIB_BOOT_QCDT_H
 
 #define DEV_TREE_SUCCESS        0
 #define DEV_TREE_MAGIC          0x54444351 /* "QCDT" */
@@ -146,4 +146,4 @@ typedef struct {
 int libboot_qcdt_validate(dt_table_t *table, boot_uint32_t *dt_hdr_size);
 int libboot_qcdt_get_entry_info(dt_table_t *table, dt_entry_local_t *dt_entry_info);
 void *libboot_qcdt_appended(void *fdt, boot_uintn_t fdt_size);
-#endif // LIB_BOOT_INTERNAL_QCDT_H
+#endif // LIB_BOOT_QCDT_H

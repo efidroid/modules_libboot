@@ -16,7 +16,7 @@
 
 #include <lib/boot.h>
 #include <lib/boot/internal/boot_internal.h>
-#include <lib/boot/internal/qcdt.h>
+#include <lib/boot/qcdt.h>
 
 #define DEV_TREE_MAGIC          0x54444351 /* "QCDT" */
 

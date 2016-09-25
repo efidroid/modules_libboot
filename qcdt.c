@@ -28,7 +28,7 @@
 
 #include <lib/boot.h>
 #include <lib/boot/internal/boot_internal.h>
-#include <lib/boot/internal/qcdt.h>
+#include <lib/boot/qcdt.h>
 #include <libfdt.h>
 
 static int devtree_entry_add_if_excact_match(dt_entry_local_t *cur_dt_entry, dt_entry_node_t *dt_list);
