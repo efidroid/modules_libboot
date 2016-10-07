@@ -33,6 +33,7 @@
 #include <libfdt.h>
 
 #define __WEAK __attribute__((weak))
+#define ARRAY_SIZE(a) (sizeof(a) / sizeof(*(a)))
 
 typedef enum {
     FDT_PARSER_UNKNOWN = -1,
@@ -44,6 +45,11 @@ typedef enum {
 static int devtree_entry_add_if_excact_match(dt_entry_local_t *cur_dt_entry, dt_entry_node_t *dt_list);
 static dt_entry_local_t *devtree_get_best_entry(dt_entry_node_t *dt_list);
 static int devtree_delete_incompatible_entries2(dt_entry_node_t *dt_list, boot_uint32_t dtb_info);
+
+static const char *msm_id_names[] = {
+    "htc,project-id",
+    "qcom,msm-id",
+};
 
 __WEAK boot_uint32_t libboot_qcdt_get_lge_rev(void) {
     return 0;
@@ -226,7 +232,12 @@ int libboot_qcdt_generate_entries(void *dtb, boot_uint32_t dtb_size, dt_entry_no
     }
 
     /* Get the msm-id prop from DTB */
-    plat_prop = (const char *)fdt_getprop(dtb, root_offset, "qcom,msm-id", &len_plat_id);
+    for (i=0; i<ARRAY_SIZE(msm_id_names); i++) {
+        plat_prop = (const char *)fdt_getprop(dtb, root_offset, msm_id_names[i], &len_plat_id);
+        if (plat_prop)
+            break;
+    }
+
     if (!plat_prop || len_plat_id <= 0) {
         LOGI("qcom,msm-id entry not found\n");
         return 0;
