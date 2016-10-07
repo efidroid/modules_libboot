@@ -51,19 +51,23 @@ static const char *msm_id_names[] = {
     "qcom,msm-id",
 };
 
-__WEAK boot_uint32_t libboot_qcdt_get_lge_rev(void) {
+__WEAK boot_uint32_t libboot_qcdt_get_lge_rev(void)
+{
     return 0;
 }
 
-__WEAK boot_uint32_t libboot_qcdt_get_oppo_id0(void) {
+__WEAK boot_uint32_t libboot_qcdt_get_oppo_id0(void)
+{
     return 0;
 }
 
-__WEAK boot_uint32_t libboot_qcdt_get_oppo_id1(void) {
+__WEAK boot_uint32_t libboot_qcdt_get_oppo_id1(void)
+{
     return 0;
 }
 
-__WEAK const char *libboot_qcdt_get_default_parser(void) {
+__WEAK const char *libboot_qcdt_get_default_parser(void)
+{
     return NULL;
 }
 
@@ -121,15 +125,16 @@ void dt_entry_list_free(dt_entry_node_t *dt_list)
     libboot_free(dt_list);
 }
 
-static fdt_parser_t libboot_qcdt_get_parser(const char * parser) {
-    if(!parser)
+static fdt_parser_t libboot_qcdt_get_parser(const char *parser)
+{
+    if (!parser)
         return FDT_PARSER_UNKNOWN;
 
-    if(!libboot_platform_strcmp(parser, "qcom"))
+    if (!libboot_platform_strcmp(parser, "qcom"))
         return FDT_PARSER_QCOM;
-    if(!libboot_platform_strcmp(parser, "qcom_lge"))
+    if (!libboot_platform_strcmp(parser, "qcom_lge"))
         return FDT_PARSER_QCOM_LGE;
-    if(!libboot_platform_strcmp(parser, "qcom_oppo"))
+    if (!libboot_platform_strcmp(parser, "qcom_oppo"))
         return FDT_PARSER_QCOM_OPPO;
 
     return FDT_PARSER_UNKNOWN;
@@ -164,9 +169,9 @@ int libboot_qcdt_generate_entries(void *dtb, boot_uint32_t dtb_size, dt_entry_no
     fdt_parser_t parser;
 
     // use default parser
-    if(!sparser)
+    if (!sparser)
         sparser = libboot_qcdt_get_default_parser();
-    if(!sparser)
+    if (!sparser)
         sparser = "qcom";
 
     parser = libboot_qcdt_get_parser(sparser);
@@ -206,12 +211,12 @@ int libboot_qcdt_generate_entries(void *dtb, boot_uint32_t dtb_size, dt_entry_no
         len_plat_id_item = DT_ENTRY_V1_SIZE;
         len_board_id_item = BOARD_ID_SIZE;
 
-        if(parser==FDT_PARSER_QCOM_LGE) {
+        if (parser==FDT_PARSER_QCOM_LGE) {
             len_plat_id_item = 4 * sizeof(boot_uint32_t);
         }
     }
 
-    if(parser==FDT_PARSER_QCOM_OPPO) {
+    if (parser==FDT_PARSER_QCOM_OPPO) {
         len_board_id_item = 4 * sizeof(boot_uint32_t);
     }
 
@@ -278,8 +283,8 @@ int libboot_qcdt_generate_entries(void *dtb, boot_uint32_t dtb_size, dt_entry_no
             cur_dt_entry->dtb_size = dtb_size;
             cur_dt_entry->parser = sparser;
 
-            if(parser==FDT_PARSER_QCOM_LGE) {
-                cur_dt_entry->data.u.lge.lge_rev = fdt32_to_cpu(*((boot_uint32_t*)(plat_prop + 3*sizeof(boot_uint32_t))));
+            if (parser==FDT_PARSER_QCOM_LGE) {
+                cur_dt_entry->data.u.lge.lge_rev = fdt32_to_cpu(*((boot_uint32_t *)(plat_prop + 3*sizeof(boot_uint32_t))));
             }
 
             cb(cur_dt_entry, dtb_list, model);
@@ -322,7 +327,7 @@ int libboot_qcdt_generate_entries(void *dtb, boot_uint32_t dtb_size, dt_entry_no
             board_data[i].variant_id = fdt32_to_cpu(((board_id_t *)board_prop)->variant_id);
             board_data[i].platform_subtype = fdt32_to_cpu(((board_id_t *)board_prop)->platform_subtype);
 
-            if(parser==FDT_PARSER_QCOM_OPPO) {
+            if (parser==FDT_PARSER_QCOM_OPPO) {
                 board_data[i].u.oppo.id0 = fdt32_to_cpu(((board_id_t *)board_prop)->u.oppo.id0);
                 board_data[i].u.oppo.id1 = fdt32_to_cpu(((board_id_t *)board_prop)->u.oppo.id1);
             }
@@ -413,7 +418,7 @@ int libboot_qcdt_generate_entries(void *dtb, boot_uint32_t dtb_size, dt_entry_no
                         dt_entry_array[k].dtb_size = dtb_size;
                         dt_entry_array[k].parser = sparser;
 
-                        if(parser==FDT_PARSER_QCOM_OPPO) {
+                        if (parser==FDT_PARSER_QCOM_OPPO) {
                             dt_entry_array[k].data.u.oppo.id0 = board_data[j].u.oppo.id0;
                             dt_entry_array[k].data.u.oppo.id1 = board_data[j].u.oppo.id1;
                         }
@@ -435,7 +440,7 @@ int libboot_qcdt_generate_entries(void *dtb, boot_uint32_t dtb_size, dt_entry_no
                     dt_entry_array[k].dtb_size = dtb_size;
                     dt_entry_array[k].parser = sparser;
 
-                    if(parser==FDT_PARSER_QCOM_OPPO) {
+                    if (parser==FDT_PARSER_QCOM_OPPO) {
                         dt_entry_array[k].data.u.oppo.id0 = board_data[j].u.oppo.id0;
                         dt_entry_array[k].data.u.oppo.id1 = board_data[j].u.oppo.id1;
                     }
@@ -460,7 +465,8 @@ int libboot_qcdt_generate_entries(void *dtb, boot_uint32_t dtb_size, dt_entry_no
     return 1;
 }
 
-static void generate_entries_add_cb(dt_entry_local_t *dt_entry, dt_entry_node_t *dt_list, const char *model) {
+static void generate_entries_add_cb(dt_entry_local_t *dt_entry, dt_entry_node_t *dt_list, const char *model)
+{
     LOGV("Found an appended flattened device tree (%s - %u %u %u 0x%x)\n",
          *model ? model : "unknown",
          dt_entry->data.platform_id, dt_entry->data.variant_id, dt_entry->data.board_hw_subtype, dt_entry->data.soc_rev);
@@ -489,7 +495,8 @@ static void generate_entries_add_cb(dt_entry_local_t *dt_entry, dt_entry_node_t 
     }
 }
 
-static int libboot_qcdt_add_compatible_entries(void *dtb, boot_uint32_t dtb_size, dt_entry_node_t *dtb_list, const char *parser) {
+static int libboot_qcdt_add_compatible_entries(void *dtb, boot_uint32_t dtb_size, dt_entry_node_t *dtb_list, const char *parser)
+{
     return libboot_qcdt_generate_entries(dtb, dtb_size, dtb_list, generate_entries_add_cb, parser);
 }
 
@@ -646,17 +653,17 @@ static int devtree_entry_add_if_excact_match(dt_entry_local_t *cur_dt_entry, dt_
         dt_node_tmp = dt_entry_list_alloc_node();
         libboot_platform_memmove((char *)dt_node_tmp->dt_entry_m,(char *)cur_dt_entry, sizeof(dt_entry_local_t));
 
-        if(!libboot_platform_strcmp(cur_dt_entry->parser, "qcom_oppo")) {
-            if(cur_dt_entry->data.u.oppo.id0!=libboot_qcdt_get_oppo_id0()) {
+        if (!libboot_platform_strcmp(cur_dt_entry->parser, "qcom_oppo")) {
+            if (cur_dt_entry->data.u.oppo.id0!=libboot_qcdt_get_oppo_id0()) {
                 goto incompatible_entry;
             }
-            if(cur_dt_entry->data.u.oppo.id1!=libboot_qcdt_get_oppo_id1()) {
+            if (cur_dt_entry->data.u.oppo.id1!=libboot_qcdt_get_oppo_id1()) {
                 goto incompatible_entry;
             }
         }
 
-        if(!libboot_platform_strcmp(cur_dt_entry->parser, "qcom_lge")) {
-            if(cur_dt_entry->data.u.lge.lge_rev!=libboot_qcdt_get_lge_rev()) {
+        if (!libboot_platform_strcmp(cur_dt_entry->parser, "qcom_lge")) {
+            if (cur_dt_entry->data.u.lge.lge_rev!=libboot_qcdt_get_lge_rev()) {
                 goto incompatible_entry;
             }
         }
