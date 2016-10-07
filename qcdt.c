@@ -32,8 +32,13 @@
 #include <lib/boot/internal/qcdt.h>
 #include <libfdt.h>
 
+#ifndef __WEAK
 #define __WEAK __attribute__((weak))
+#endif
+
+#ifndef ARRAY_SIZE
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(*(a)))
+#endif
 
 typedef enum {
     FDT_PARSER_UNKNOWN = -1,
