@@ -216,6 +216,10 @@ int libboot_qcdt_generate_entries(void *dtb, boot_uint32_t dtb_size, dt_entry_no
         len_plat_id_item = DT_ENTRY_V1_SIZE;
         len_board_id_item = BOARD_ID_SIZE;
 
+        if (parser==FDT_PARSER_QCOM) {
+            len_plat_id_item = 4 * sizeof(boot_uint32_t);
+        }
+        
         if (parser==FDT_PARSER_QCOM_LGE) {
             len_plat_id_item = 4 * sizeof(boot_uint32_t);
         }
