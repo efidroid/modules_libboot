@@ -64,12 +64,55 @@ typedef enum {
     LIBBOOT_TAGS_TYPE_QCDT,
 } libboot_tags_type_t;
 
+static inline const char *bootimgtype2str(bootimg_type_t type)
+{
+    switch (type) {
+        case BOOTIMG_TYPE_ANDROID:
+            return "Android";
+        case BOOTIMG_TYPE_EFI:
+            return "EFI";
+        case BOOTIMG_TYPE_ELF:
+            return "ELF";
+        case BOOTIMG_TYPE_QCMBN:
+            return "QCMBN";
+        case BOOTIMG_TYPE_ZIMAGE:
+            return "zImage";
+        case BOOTIMG_TYPE_UIMAGE:
+            return "uImage";
+        case BOOTIMG_TYPE_GZIP:
+            return "gzip";
+        case BOOTIMG_TYPE_RAW:
+            return "RAW";
+
+        default:
+        case BOOTIMG_TYPE_UNKNOWN:
+            return "unknown";
+    }
+}
+
+static inline const char *tagtype2str(libboot_tags_type_t type)
+{
+    switch (type) {
+        case LIBBOOT_TAGS_TYPE_ATAGS:
+            return "atags";
+        case LIBBOOT_TAGS_TYPE_FDT:
+            return "fdt";
+        case LIBBOOT_TAGS_TYPE_QCDT:
+            return "qcdt";
+
+        default:
+        case LIBBOOT_TAGS_TYPE_UNKNOWN:
+            return "unknown";
+    }
+}
+
 // ERRORS
 typedef enum {
     LIBBOOT_ERROR_GROUP_UNKNOWN = -1,
     LIBBOOT_ERROR_GROUP_COMMON,
     LIBBOOT_ERROR_GROUP_ANDROID,
     LIBBOOT_ERROR_GROUP_ELF,
+    LIBBOOT_ERROR_GROUP_QCDT,
 } libboot_error_group_t;
 
 typedef enum {
@@ -88,6 +131,7 @@ typedef enum {
     LIBBOOT_ERROR_COMMON_LOAD_NO_IO,
     LIBBOOT_ERROR_COMMON_LOAD_MODULE_ERROR,
     LIBBOOT_ERROR_COMMON_LOAD_NO_MATCH,
+    LIBBOOT_ERROR_COMMON_LOAD_BUG,
     LIBBOOT_ERROR_COMMON_GENTAGS_MODULE_ERROR,
     LIBBOOT_ERROR_COMMON_GENTAGS_NO_MATCH,
     LIBBOOT_ERROR_COMMON_PREPARE_INVALID_TYPE,
@@ -111,6 +155,19 @@ typedef enum {
     LIBBOOT_ERROR_ELF_NO_CMDLINE,
     LIBBOOT_ERROR_ELF_UNKNOWN_IMAGE,
 } libboot_error_elf_t;
+
+typedef enum {
+    LIBBOOT_ERROR_QCDT_UNKNOWN = -1,
+    LIBBOOT_ERROR_QCDT_UNKNOWN_PARSER,
+    LIBBOOT_ERROR_QCDT_PATH_NOT_FOUND,
+    LIBBOOT_ERROR_QCDT_NOT_A_MULTIPLE,
+    LIBBOOT_ERROR_QCDT_ID_ENTRY_NOT_FOUND,
+    LIBBOOT_ERROR_QCDT_NO_MATCH,
+    LIBBOOT_ERROR_QCDT_NO_MATCH2,
+    LIBBOOT_ERROR_QCDT_INVALID_MAGIC,
+    LIBBOOT_ERROR_QCDT_UNSUPPORTED_VERSION,
+    LIBBOOT_ERROR_QCDT_INVALID_HEADER_SIZE,
+} libboot_error_qcdt_t;
 
 char **libboot_error_stack_get(void);
 boot_uintn_t libboot_error_stack_count(void);

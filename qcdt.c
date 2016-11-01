@@ -181,13 +181,15 @@ int libboot_qcdt_generate_entries(void *dtb, boot_uint32_t dtb_size, dt_entry_no
 
     parser = libboot_qcdt_get_parser(sparser);
     if (parser==FDT_PARSER_UNKNOWN) {
-        LOGE("unknown parser: %s\n", sparser);
+        libboot_format_error(LIBBOOT_ERROR_GROUP_QCDT, LIBBOOT_ERROR_QCDT_UNKNOWN_PARSER, sparser);
         return 0;
     }
 
     root_offset = fdt_path_offset(dtb, "/");
-    if (root_offset < 0)
+    if (root_offset < 0) {
+        libboot_format_error(LIBBOOT_ERROR_GROUP_QCDT, LIBBOOT_ERROR_QCDT_PATH_NOT_FOUND, "/", fdt_strerror(root_offset));
         return 0;
+    }
 
     prop = fdt_getprop(dtb, root_offset, "model", &len);
     if (prop && len > 0) {
@@ -227,33 +229,33 @@ int libboot_qcdt_generate_entries(void *dtb, boot_uint32_t dtb_size, dt_entry_no
 
     if (dtb_ver == DEV_TREE_VERSION_V2 || dtb_ver == DEV_TREE_VERSION_V3) {
         if (len_board_id % len_board_id_item) {
-            LOGE("qcom,board-id in device tree is (%d) not a multiple of (%d)\n",
-                 len_board_id, len_board_id_item);
+            libboot_format_error(LIBBOOT_ERROR_GROUP_QCDT, LIBBOOT_ERROR_QCDT_NOT_A_MULTIPLE, "qcom,board-id", len_board_id, len_board_id_item);
             return 0;
         }
     }
 
     if (dtb_ver == DEV_TREE_VERSION_V3) {
         if ((len_pmic_id % len_pmic_id_item)) {
-            LOGE("qcom,pmic-id(%d) in device tree is not a multiple of (%d)\n",
-                 len_pmic_id, len_pmic_id_item);
+            libboot_format_error(LIBBOOT_ERROR_GROUP_QCDT, LIBBOOT_ERROR_QCDT_NOT_A_MULTIPLE, "qcom,pmic-id", len_pmic_id, len_pmic_id_item);
             return 0;
         }
     }
 
     /* Get the msm-id prop from DTB */
+    const char *msm_id_prop_name;
     for (i=0; i<ARRAY_SIZE(msm_id_names); i++) {
         plat_prop = (const char *)fdt_getprop(dtb, root_offset, msm_id_names[i], &len_plat_id);
-        if (plat_prop)
+        if (plat_prop) {
+            msm_id_prop_name = msm_id_names[i];
             break;
+        }
     }
 
     if (!plat_prop || len_plat_id <= 0) {
-        LOGI("qcom,msm-id entry not found\n");
+        libboot_format_error(LIBBOOT_ERROR_GROUP_QCDT, LIBBOOT_ERROR_QCDT_ID_ENTRY_NOT_FOUND);
         return 0;
     } else if (len_plat_id % len_plat_id_item) {
-        LOGI("qcom,msm-id in device tree is (%d) not a multiple of (%d)\n",
-             len_plat_id, len_plat_id_item);
+        libboot_format_error(LIBBOOT_ERROR_GROUP_QCDT, LIBBOOT_ERROR_QCDT_NOT_A_MULTIPLE, msm_id_prop_name, len_plat_id, len_plat_id_item);
         return 0;
     }
 
@@ -268,7 +270,6 @@ int libboot_qcdt_generate_entries(void *dtb, boot_uint32_t dtb_size, dt_entry_no
                        libboot_alloc(sizeof(dt_entry_local_t));
 
         if (!cur_dt_entry) {
-            LOGE("Out of memory\n");
             return 0;
         }
         libboot_platform_memset(cur_dt_entry, 0, sizeof(dt_entry_local_t));
@@ -529,7 +530,6 @@ void *libboot_qcdt_appended(void *fdt, boot_uintn_t fdt_size, const char *parser
     dt_entry_queue = dt_entry_list_create();
 
     if (!dt_entry_queue) {
-        LOGE("Out of memory\n");
         return NULL;
     }
 
@@ -576,12 +576,12 @@ void *libboot_qcdt_appended(void *fdt, boot_uintn_t fdt_size, const char *parser
         return bestmatch_tag;
     }
 
-    LOGE("No DTB found for the board: <%u %u 0x%x>, 0x%0x/0x%x/0x%x/0x%0x\n",
-         libboot_qcdt_platform_id(),
-         libboot_qcdt_hardware_id(),
-         libboot_qcdt_soc_version(),
-         libboot_qcdt_pmic_target(0), libboot_qcdt_pmic_target(1),
-         libboot_qcdt_pmic_target(2), libboot_qcdt_pmic_target(3));
+    libboot_format_error(LIBBOOT_ERROR_GROUP_QCDT, LIBBOOT_ERROR_QCDT_NO_MATCH,
+                         libboot_qcdt_platform_id(),
+                         libboot_qcdt_hardware_id(),
+                         libboot_qcdt_soc_version(),
+                         libboot_qcdt_pmic_target(0), libboot_qcdt_pmic_target(1),
+                         libboot_qcdt_pmic_target(2), libboot_qcdt_pmic_target(3));
 
     return NULL;
 }
@@ -594,7 +594,7 @@ int libboot_qcdt_validate(dt_table_t *table, boot_uint32_t *dt_hdr_size)
 
     /* Validate the device tree table header */
     if (table->magic != DEV_TREE_MAGIC) {
-        LOGE("ERROR: Bad magic in device tree table \n");
+        libboot_format_error(LIBBOOT_ERROR_GROUP_QCDT, LIBBOOT_ERROR_QCDT_INVALID_MAGIC);
         return -1;
     }
 
@@ -605,16 +605,16 @@ int libboot_qcdt_validate(dt_table_t *table, boot_uint32_t *dt_hdr_size)
     } else if (table->version == DEV_TREE_VERSION_V3) {
         dt_entry_size = sizeof(dt_entry_t);
     } else {
-        LOGE("ERROR: Unsupported version (%d) in DT table \n",
-             table->version);
+        libboot_format_error(LIBBOOT_ERROR_GROUP_QCDT, LIBBOOT_ERROR_QCDT_UNSUPPORTED_VERSION, table->version);
         return -1;
     }
 
     hdr_size = (boot_uint64_t)table->num_entries * dt_entry_size + DEV_TREE_HEADER_SIZE;
 
-    if (hdr_size > UINT_MAX)
+    if (hdr_size > UINT_MAX) {
+        libboot_format_error(LIBBOOT_ERROR_GROUP_QCDT, LIBBOOT_ERROR_QCDT_INVALID_HEADER_SIZE);
         return -1;
-    else
+    } else
         *dt_hdr_size = hdr_size & UINT_MAX;
 
     return 0;
@@ -1012,8 +1012,7 @@ int libboot_qcdt_get_entry_info(dt_table_t *table, dt_entry_local_t *dt_entry_in
     boot_uint32_t found = 0;
 
     if (!dt_entry_info) {
-        LOGE("ERROR: Bad parameter passed to %s \n",
-             __func__);
+        LOGE("ERROR: Bad parameter passed to %s \n", __func__);
         return -1;
     }
 
@@ -1023,7 +1022,6 @@ int libboot_qcdt_get_entry_info(dt_table_t *table, dt_entry_local_t *dt_entry_in
     dt_entry_queue = dt_entry_list_create();
 
     if (!dt_entry_queue) {
-        LOGE("Out of memory\n");
         return -1;
     }
 
@@ -1106,8 +1104,7 @@ int libboot_qcdt_get_entry_info(dt_table_t *table, dt_entry_local_t *dt_entry_in
                 table_ptr += sizeof(dt_entry_t);
                 break;
             default:
-                LOGE("ERROR: Unsupported version (%d) in DT table \n",
-                     table->version);
+                libboot_format_error(LIBBOOT_ERROR_GROUP_QCDT, LIBBOOT_ERROR_QCDT_UNSUPPORTED_VERSION, table->version);
                 dt_entry_list_free(dt_entry_queue);
                 return -1;
         }
@@ -1146,9 +1143,9 @@ int libboot_qcdt_get_entry_info(dt_table_t *table, dt_entry_local_t *dt_entry_in
         return 0;
     }
 
-    LOGE("ERROR: Unable to find suitable device tree for device (%u/0x%08x/0x%08x/%u)\n",
-         libboot_qcdt_platform_id(), libboot_qcdt_soc_version(),
-         libboot_qcdt_target_id(), libboot_qcdt_hardware_subtype());
+    libboot_format_error(LIBBOOT_ERROR_GROUP_QCDT, LIBBOOT_ERROR_QCDT_NO_MATCH2,
+                         libboot_qcdt_platform_id(), libboot_qcdt_soc_version(),
+                         libboot_qcdt_target_id(), libboot_qcdt_hardware_subtype());
 
     dt_entry_list_free(dt_entry_queue);
     return -1;

@@ -264,7 +264,7 @@ do_free:
 
         // we have a match
         if (type!=BOOTIMG_TYPE_UNKNOWN) {
-            // this is is initial check
+            // this is the initial check
             if (!context->rootio) {
                 boot_io_t *rootio = libboot_refalloc(io, 0);
                 if (!rootio) return -1;
@@ -429,18 +429,29 @@ int libboot_init(void)
     libboot_internal_register_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_IDENTIFY_NO_MATCH, "unknown image type");
     libboot_internal_register_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_LOAD_NOT_IDENTIFIED, "can't load unidentified context");
     libboot_internal_register_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_LOAD_NO_IO, "can't load context without IO");
-    libboot_internal_register_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_LOAD_MODULE_ERROR, "loader(%"LIBBOOT_FMT_INT") returned %"LIBBOOT_FMT_INT);
-    libboot_internal_register_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_LOAD_NO_MATCH, "can't find loader for type %"LIBBOOT_FMT_INT);
-    libboot_internal_register_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_GENTAGS_MODULE_ERROR, "tagloader(%"LIBBOOT_FMT_INT") returned %"LIBBOOT_FMT_INT);
-    libboot_internal_register_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_GENTAGS_NO_MATCH, "can't find tagloader for type %"LIBBOOT_FMT_INT);
+    libboot_internal_register_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_LOAD_MODULE_ERROR, "loader '%s'(%"LIBBOOT_FMT_INT") returned %"LIBBOOT_FMT_INT);
+    libboot_internal_register_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_LOAD_NO_MATCH, "can't find loader for %s(%"LIBBOOT_FMT_INT") image");
+    libboot_internal_register_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_LOAD_BUG, "loader %s(%"LIBBOOT_FMT_INT") returned it's on type");
+    libboot_internal_register_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_GENTAGS_MODULE_ERROR, "tagloader '%s'(%"LIBBOOT_FMT_INT") returned %"LIBBOOT_FMT_INT);
+    libboot_internal_register_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_GENTAGS_NO_MATCH, "can't find tagloader for type '%s'(%"LIBBOOT_FMT_INT")");
 
-    libboot_internal_register_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_PREPARE_INVALID_TYPE, "can't prepare with tags of type %"LIBBOOT_FMT_INT);
+    libboot_internal_register_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_PREPARE_INVALID_TYPE, "can't prepare with tags of type '%s'(%"LIBBOOT_FMT_INT")");
     libboot_internal_register_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_PREPARE_NO_KERNEL_MEMORY, "can't allocate kernel boot memory at %"LIBBOOT_FMT_ADDR" size %"LIBBOOT_FMT_INT);
     libboot_internal_register_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_PREPARE_NO_RAMDISK_MEMORY, "can't allocate ramdisk boot memory at %"LIBBOOT_FMT_ADDR" size %"LIBBOOT_FMT_INT);
     libboot_internal_register_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_PREPARE_NO_TAGS_MEMORY, "can't allocate tags boot memory at %"LIBBOOT_FMT_ADDR" size %"LIBBOOT_FMT_INT);
 
     libboot_internal_register_error(LIBBOOT_ERROR_GROUP_ELF, LIBBOOT_ERROR_ELF_NO_CMDLINE, "can't find cmdline");
     libboot_internal_register_error(LIBBOOT_ERROR_GROUP_ELF, LIBBOOT_ERROR_ELF_UNKNOWN_IMAGE, "unknown image in program header");
+
+    libboot_internal_register_error(LIBBOOT_ERROR_GROUP_QCDT, LIBBOOT_ERROR_QCDT_UNKNOWN_PARSER, "unknown qcdt parser: %s");
+    libboot_internal_register_error(LIBBOOT_ERROR_GROUP_QCDT, LIBBOOT_ERROR_QCDT_PATH_NOT_FOUND, "fdt path '%s' not found: %s");
+    libboot_internal_register_error(LIBBOOT_ERROR_GROUP_QCDT, LIBBOOT_ERROR_QCDT_NOT_A_MULTIPLE, "%s(%d) in device tree is not a multiple of (%d)");
+    libboot_internal_register_error(LIBBOOT_ERROR_GROUP_QCDT, LIBBOOT_ERROR_QCDT_ID_ENTRY_NOT_FOUND, "ID entry not found");
+    libboot_internal_register_error(LIBBOOT_ERROR_GROUP_QCDT, LIBBOOT_ERROR_QCDT_NO_MATCH, "No DTB found for the board: <%u %u 0x%x>, 0x%0x/0x%x/0x%x/0x%0x");
+    libboot_internal_register_error(LIBBOOT_ERROR_GROUP_QCDT, LIBBOOT_ERROR_QCDT_NO_MATCH2, "Unable to find suitable device tree for device (%u/0x%08x/0x%08x/%u)");
+    libboot_internal_register_error(LIBBOOT_ERROR_GROUP_QCDT, LIBBOOT_ERROR_QCDT_INVALID_MAGIC, "Bad magic in device tree table");
+    libboot_internal_register_error(LIBBOOT_ERROR_GROUP_QCDT, LIBBOOT_ERROR_QCDT_UNSUPPORTED_VERSION, "Unsupported version (%"LIBBOOT_FMT_INT") in DT table");
+    libboot_internal_register_error(LIBBOOT_ERROR_GROUP_QCDT, LIBBOOT_ERROR_QCDT_INVALID_HEADER_SIZE, "qcdt header is too big");
 
     return 0;
 }
@@ -453,7 +464,7 @@ void libboot_uninit(void)
         libboot_free(format);
     }
 
-    // error messages
+    // memory leaks
     while (!libboot_list_is_empty(&allocations)) {
         allocation_t *alloc = libboot_list_remove_tail_type(&allocations, allocation_t, node);
 
@@ -514,7 +525,7 @@ int libboot_load_partial(bootimg_context_t *context, boot_uintn_t type, boot_uin
 
                 // abort on error
                 if (rc) {
-                    libboot_format_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_LOAD_MODULE_ERROR, mod->type, rc);
+                    libboot_format_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_LOAD_MODULE_ERROR, bootimgtype2str(mod->type), mod->type, rc);
                     return rc;
                 }
 
@@ -526,7 +537,7 @@ int libboot_load_partial(bootimg_context_t *context, boot_uintn_t type, boot_uin
 
         // abort
         if (!matched) {
-            libboot_format_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_LOAD_NO_MATCH, context->type);
+            libboot_format_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_LOAD_NO_MATCH, bootimgtype2str(context->type), context->type);
             rc = -1;
             break;
         }
@@ -542,6 +553,7 @@ int libboot_load_partial(bootimg_context_t *context, boot_uintn_t type, boot_uin
 
         // this is probably a loader bug
         if (context->type==oldtype) {
+            libboot_format_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_LOAD_BUG, bootimgtype2str(context->type), context->type);
             rc = -1;
             break;
         }
@@ -663,7 +675,7 @@ static int libboot_generate_tags(bootimg_context_t *context)
 
                 // abort on error
                 if (rc) {
-                    libboot_format_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_GENTAGS_MODULE_ERROR, type, rc);
+                    libboot_format_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_GENTAGS_MODULE_ERROR, tagtype2str(type), type, rc);
                     return rc;
                 }
 
@@ -679,7 +691,7 @@ static int libboot_generate_tags(bootimg_context_t *context)
 
     // no tags were loaded
     if (!matched || !context->tags_data || !context->tags_ready) {
-        libboot_format_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_GENTAGS_NO_MATCH, context->type);
+        libboot_format_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_GENTAGS_NO_MATCH, bootimgtype2str(context->type), context->type);
         rc = -1;
     }
 
@@ -692,7 +704,7 @@ int libboot_prepare(bootimg_context_t *context)
 
     // the image wasn't loaded correctly
     if (context->type!=BOOTIMG_TYPE_RAW) {
-        libboot_format_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_PREPARE_INVALID_TYPE, context->type);
+        libboot_format_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_PREPARE_INVALID_TYPE, bootimgtype2str(context->type), context->type);
         return -1;
     }
 
