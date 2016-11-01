@@ -158,7 +158,7 @@ struct bootimg_context {
     void *default_qcdt;
     libboot_context_fn_addatags_t add_custom_atags;
     libboot_context_fn_patchfdt_t patch_fdt;
-    const char* fdt_parser;
+    const char *fdt_parser;
 };
 typedef struct bootimg_context bootimg_context_t;
 
