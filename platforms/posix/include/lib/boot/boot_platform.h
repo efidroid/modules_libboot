@@ -22,11 +22,12 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stddef.h>
+#include <inttypes.h>
 
-#define LIBBOOT_FMT_UINTN "lu"
-#define LIBBOOT_FMT_UINT32 "u"
-#define LIBBOOT_FMT_ADDR "lx"
-#define LIBBOOT_FMT_INT "d"
+#define LIBBOOT_FMT_UINTN PRIuPTR
+#define LIBBOOT_FMT_UINT32 PRIu32
+#define LIBBOOT_FMT_ADDR PRIxPTR
+#define LIBBOOT_FMT_INT PRId32
 
 #define LIBBOOT_ASSERT assert
 #define LIBBOOT_OFFSETOF(StrucName, Member)  offsetof(StrucName, Member)
