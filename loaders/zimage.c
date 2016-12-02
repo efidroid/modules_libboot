@@ -40,11 +40,13 @@ static int ldrmodule_load(bootimg_context_t *context, boot_uintn_t type, boot_ui
 
     // get appended fdt
     if (zimage_size<context->kernel_size) {
-        void *fdt = libboot_refalloc(context->kernel_data + zimage_size, context->kernel_size - zimage_size);
+        boot_uintn_t tags_size = context->kernel_size - zimage_size;
+        void *fdt = libboot_refalloc(context->kernel_data + zimage_size, tags_size);
         if (!fdt) return -1;
 
         libboot_free(context->tags_data);
         context->tags_data = fdt;
+        context->tags_size = tags_size;
     }
 
     // we'll need tags to boot
