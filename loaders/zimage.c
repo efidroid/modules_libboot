@@ -33,7 +33,7 @@ static int ldrmodule_load(bootimg_context_t *context, boot_uintn_t type, boot_ui
 
     // get zImage size
     boot_uint8_t *data8 = context->kernel_data;
-    boot_uintn_t zimage_start, zimage_end, zimage_size;
+    boot_uint32_t zimage_start, zimage_end, zimage_size;
     libboot_platform_memmove(&zimage_start, data8 + 0x28, sizeof(zimage_start));
     libboot_platform_memmove(&zimage_end,   data8 + 0x2C, sizeof(zimage_end));
     zimage_size = zimage_end - zimage_start;
