@@ -436,9 +436,9 @@ int libboot_init(void)
     libboot_internal_register_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_GENTAGS_NO_MATCH, "can't find tagloader for type '%s'(%"LIBBOOT_FMT_INT")");
 
     libboot_internal_register_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_PREPARE_INVALID_TYPE, "can't prepare with tags of type '%s'(%"LIBBOOT_FMT_INT")");
-    libboot_internal_register_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_PREPARE_NO_KERNEL_MEMORY, "can't allocate kernel boot memory at %"LIBBOOT_FMT_ADDR" size %"LIBBOOT_FMT_INT);
-    libboot_internal_register_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_PREPARE_NO_RAMDISK_MEMORY, "can't allocate ramdisk boot memory at %"LIBBOOT_FMT_ADDR" size %"LIBBOOT_FMT_INT);
-    libboot_internal_register_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_PREPARE_NO_TAGS_MEMORY, "can't allocate tags boot memory at %"LIBBOOT_FMT_ADDR" size %"LIBBOOT_FMT_INT);
+    libboot_internal_register_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_PREPARE_NO_KERNEL_MEMORY, "can't allocate kernel boot memory at %"LIBBOOT_FMT_ADDR" size %"LIBBOOT_FMT_UINTN);
+    libboot_internal_register_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_PREPARE_NO_RAMDISK_MEMORY, "can't allocate ramdisk boot memory at %"LIBBOOT_FMT_ADDR" size %"LIBBOOT_FMT_UINTN);
+    libboot_internal_register_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_PREPARE_NO_TAGS_MEMORY, "can't allocate tags boot memory at %"LIBBOOT_FMT_ADDR" size %"LIBBOOT_FMT_UINTN);
 
     libboot_internal_register_error(LIBBOOT_ERROR_GROUP_ELF, LIBBOOT_ERROR_ELF_NO_CMDLINE, "can't find cmdline");
     libboot_internal_register_error(LIBBOOT_ERROR_GROUP_ELF, LIBBOOT_ERROR_ELF_UNKNOWN_IMAGE, "unknown image in program header");
