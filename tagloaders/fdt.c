@@ -186,12 +186,11 @@ int fdtloader_process_multifdt(bootimg_context_t *context)
     if (fdt_size<=0) return -1;
 
     void *tags_data = NULL;
-    if(IS_ALIGNED(fdt, sizeof(boot_uintn_t))) {
+    if (IS_ALIGNED(fdt, sizeof(boot_uintn_t))) {
         // refalloc fdt
         tags_data = libboot_refalloc(fdt, fdt_size);
         if (!tags_data) return -1;
-    }
-    else {
+    } else {
         // allocate new (aligned) memory
         tags_data = libboot_alloc(fdt_size);
         if (!tags_data) return -1;

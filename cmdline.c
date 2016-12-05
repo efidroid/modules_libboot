@@ -156,7 +156,7 @@ void libboot_cmdline_addall(libboot_list_node_t *list, const char *_cmdline, int
     const char *sep = " ";
     char *saveptr = NULL;
 
-    char* cmdline = libboot_platform_strdup(_cmdline);
+    char *cmdline = libboot_platform_strdup(_cmdline);
     if (!cmdline) return;
 
     char *pch = libboot_platform_strtok_r(cmdline, sep, &saveptr);
