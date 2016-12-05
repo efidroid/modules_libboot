@@ -534,7 +534,7 @@ void *libboot_qcdt_appended(void *fdt, boot_uintn_t fdt_size, const char *parser
     }
 
     dtb = fdt;
-    while (((uintptr_t)dtb + sizeof(struct fdt_header)) < (uintptr_t)fdt_end) {
+    while (((boot_uintn_t)dtb + sizeof(struct fdt_header)) < (boot_uintn_t)fdt_end) {
         struct fdt_header dtb_hdr;
         boot_uint32_t dtb_size;
 
@@ -542,8 +542,8 @@ void *libboot_qcdt_appended(void *fdt, boot_uintn_t fdt_size, const char *parser
          * and operate on it separately */
         libboot_platform_memmove(&dtb_hdr, dtb, sizeof(struct fdt_header));
         if (fdt_check_header((const void *)&dtb_hdr) != 0 ||
-                ((uintptr_t)dtb + (uintptr_t)fdt_totalsize((const void *)&dtb_hdr) < (uintptr_t)dtb) ||
-                ((uintptr_t)dtb + (uintptr_t)fdt_totalsize((const void *)&dtb_hdr) > (uintptr_t)fdt_end))
+                ((boot_uintn_t)dtb + (boot_uintn_t)fdt_totalsize((const void *)&dtb_hdr) < (boot_uintn_t)dtb) ||
+                ((boot_uintn_t)dtb + (boot_uintn_t)fdt_totalsize((const void *)&dtb_hdr) > (boot_uintn_t)fdt_end))
             break;
         dtb_size = fdt_totalsize(&dtb_hdr);
 

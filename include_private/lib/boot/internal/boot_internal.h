@@ -38,7 +38,7 @@
 #define ROUNDUP(a, b) (((a) + ((b)-1)) & ~((b)-1))
 #define ROUNDDOWN(a, b) ((a) & ~((b)-1))
 #define ALIGN(a, b) ROUNDUP(a, b)
-#define IS_ALIGNED(a, b) (!(((uintptr_t)(a)) & (((uintptr_t)(b))-1)))
+#define IS_ALIGNED(a, b) (!(((boot_uintn_t)(a)) & (((boot_uintn_t)(b))-1)))
 #define IO_ALIGN(io, sz) ALIGN(sz, (io)->blksz)
 
 // LOADERS
