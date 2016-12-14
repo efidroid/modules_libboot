@@ -32,6 +32,28 @@ typedef struct {
     int rc;
 } meminfo_pdata_t;
 
+static int fdtloader_appendprop_string(void *fdt, int nodeoffset, const char *name, const char *str)
+{
+    int err, oldlen;
+    struct fdt_property *prop;
+
+    // get property
+    prop = fdt_get_property_w(fdt, nodeoffset, name, &oldlen);
+
+    // append string
+    err = fdt_appendprop_string(fdt, nodeoffset, name, str);
+    if (err)
+        return err;
+
+    if (prop) {
+        // Add space to separate the appended strings
+        prop->data[oldlen-1] = 0x20;
+    }
+
+    return 0;
+}
+
+
 static int fdtloader_get_cell_sizes(meminfo_pdata_t *pdata)
 {
     int rc;
@@ -257,7 +279,7 @@ static int tagmodule_patch(bootimg_context_t *context)
         char *cmdline = libboot_alloc(cmdline_len);
         libboot_cmdline_generate(&context->cmdline, cmdline, cmdline_len);
 
-        rc = fdt_appendprop_string(fdt, offset, "bootargs", cmdline);
+        rc = fdtloader_appendprop_string(fdt, offset, "bootargs", cmdline);
         libboot_free(cmdline);
         if (rc) goto out_free;
     }
