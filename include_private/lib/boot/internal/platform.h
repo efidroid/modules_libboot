@@ -39,6 +39,7 @@ char *libboot_platform_strtok_r(char *str, const char *delim, char **saveptr);
 char *libboot_platform_strchr(const char *s, int c);
 int   libboot_platform_strcmp(const char *str1, const char *str2);
 boot_uintn_t libboot_platform_strlen(const char *str);
+char *libboot_platform_strncpy(char *dest, const char *src, boot_uintn_t n);
 
 boot_uintn_t libboot_platform_machtype(void);
 void *libboot_platform_bootalloc(boot_uintn_t addr, boot_uintn_t sz);
