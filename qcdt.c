@@ -45,6 +45,7 @@ typedef enum {
     FDT_PARSER_QCOM = 0,
     FDT_PARSER_QCOM_LGE,
     FDT_PARSER_QCOM_OPPO,
+    FDT_PARSER_QCOM_MOTOROLA,
 } fdt_parser_t;
 
 static int devtree_entry_add_if_excact_match(dt_entry_local_t *cur_dt_entry, dt_entry_node_t *dt_list);
@@ -69,6 +70,11 @@ __WEAK boot_uint32_t libboot_qcdt_get_oppo_id0(void)
 __WEAK boot_uint32_t libboot_qcdt_get_oppo_id1(void)
 {
     return 0;
+}
+
+__WEAK const char *libboot_qcdt_get_motorola_model(void)
+{
+    return "";
 }
 
 __WEAK const char *libboot_qcdt_get_default_parser(void)
@@ -141,6 +147,8 @@ static fdt_parser_t libboot_qcdt_get_parser(const char *parser)
         return FDT_PARSER_QCOM_LGE;
     if (!libboot_platform_strcmp(parser, "qcom_oppo"))
         return FDT_PARSER_QCOM_OPPO;
+    if (!libboot_platform_strcmp(parser, "qcom_motorola"))
+        return FDT_PARSER_QCOM_MOTOROLA;
 
     return FDT_PARSER_UNKNOWN;
 }
@@ -293,6 +301,14 @@ int libboot_qcdt_generate_entries(void *dtb, boot_uint32_t dtb_size, dt_entry_no
                 cur_dt_entry->data.u.lge.lge_rev = fdt32_to_cpu(*((boot_uint32_t *)(plat_prop + 3*sizeof(boot_uint32_t))));
             }
 
+            if (parser==FDT_PARSER_QCOM_MOTOROLA) {
+                cur_dt_entry->data.u.motorola.version = 1;
+
+                cur_dt_entry->data.u.motorola.model[0] = 0;
+                if (model)
+                    libboot_platform_strncpy(cur_dt_entry->data.u.motorola.model, model, sizeof(cur_dt_entry->data.u.motorola.model));
+            }
+
             cb(cur_dt_entry, dtb_list, model);
 
             plat_prop += len_plat_id_item;
@@ -429,6 +445,14 @@ int libboot_qcdt_generate_entries(void *dtb, boot_uint32_t dtb_size, dt_entry_no
                             dt_entry_array[k].data.u.oppo.id1 = board_data[j].u.oppo.id1;
                         }
 
+                        if (parser==FDT_PARSER_QCOM_MOTOROLA) {
+                            dt_entry_array[k].data.u.motorola.version = 1;
+
+                            dt_entry_array[k].data.u.motorola.model[0] = 0;
+                            if (model)
+                                libboot_platform_strncpy(dt_entry_array[k].data.u.motorola.model, model, sizeof(dt_entry_array[k].data.u.motorola.model));
+                        }
+
                         k++;
                     }
 
@@ -449,6 +473,14 @@ int libboot_qcdt_generate_entries(void *dtb, boot_uint32_t dtb_size, dt_entry_no
                     if (parser==FDT_PARSER_QCOM_OPPO) {
                         dt_entry_array[k].data.u.oppo.id0 = board_data[j].u.oppo.id0;
                         dt_entry_array[k].data.u.oppo.id1 = board_data[j].u.oppo.id1;
+                    }
+
+                    if (parser==FDT_PARSER_QCOM_MOTOROLA) {
+                        dt_entry_array[k].data.u.motorola.version = 1;
+
+                        dt_entry_array[k].data.u.motorola.model[0] = 0;
+                        if (model)
+                            libboot_platform_strncpy(dt_entry_array[k].data.u.motorola.model, model, sizeof(dt_entry_array[k].data.u.motorola.model));
                     }
 
                     k++;
@@ -591,6 +623,7 @@ int libboot_qcdt_validate(dt_table_t *table, boot_uint32_t *dt_hdr_size)
 {
     int dt_entry_size;
     boot_uint64_t hdr_size;
+    boot_uint32_t qcdt_version;
 
     /* Validate the device tree table header */
     if (table->magic != DEV_TREE_MAGIC) {
@@ -598,11 +631,12 @@ int libboot_qcdt_validate(dt_table_t *table, boot_uint32_t *dt_hdr_size)
         return -1;
     }
 
-    if (table->version == DEV_TREE_VERSION_V1) {
+    qcdt_version = table->version & 0xff;
+    if (qcdt_version == DEV_TREE_VERSION_V1) {
         dt_entry_size = sizeof(dt_entry_v1_t);
-    } else if (table->version == DEV_TREE_VERSION_V2) {
+    } else if (qcdt_version == DEV_TREE_VERSION_V2) {
         dt_entry_size = sizeof(dt_entry_v2_t);
-    } else if (table->version == DEV_TREE_VERSION_V3) {
+    } else if (qcdt_version == DEV_TREE_VERSION_V3) {
         dt_entry_size = sizeof(dt_entry_t);
     } else {
         libboot_format_error(LIBBOOT_ERROR_GROUP_QCDT, LIBBOOT_ERROR_QCDT_UNSUPPORTED_VERSION, table->version);
@@ -670,6 +704,13 @@ static int devtree_entry_add_if_excact_match(dt_entry_local_t *cur_dt_entry, dt_
         if (!libboot_platform_strcmp(cur_dt_entry->parser, "qcom_lge")) {
             if (cur_dt_entry->data.u.lge.lge_rev!=libboot_qcdt_get_lge_rev()) {
                 goto incompatible_entry;
+            }
+        }
+
+        if (!libboot_platform_strcmp(cur_dt_entry->parser, "qcom_motorola") && cur_dt_entry->data.u.motorola.version) {
+            if (cur_dt_entry->data.u.motorola.model[0]) {
+                if (libboot_platform_strcmp(cur_dt_entry->data.u.motorola.model, libboot_qcdt_get_motorola_model()))
+                    goto incompatible_entry;
             }
         }
 
@@ -1010,6 +1051,10 @@ int libboot_qcdt_get_entry_info(dt_table_t *table, dt_entry_local_t *dt_entry_in
     dt_entry_t *dt_entry_v3 = NULL;
     dt_entry_node_t *dt_entry_queue = NULL;
     boot_uint32_t found = 0;
+    boot_uint32_t qcdt_version;
+    boot_uint32_t motorola_version;
+    boot_uint32_t entry_size;
+    const char *parser = "qcom";
 
     if (!dt_entry_info) {
         LOGE("ERROR: Bad parameter passed to %s \n", __func__);
@@ -1025,12 +1070,37 @@ int libboot_qcdt_get_entry_info(dt_table_t *table, dt_entry_local_t *dt_entry_in
         return -1;
     }
 
-    LOGI("DTB Total entry: %d, DTB version: %d\n", table->num_entries, table->version);
+    qcdt_version = table->version & 0xff;
+    motorola_version = table->version >> 8;
+    switch (qcdt_version) {
+        case DEV_TREE_VERSION_V1:
+            entry_size =  sizeof(dt_entry_v1_t);
+            break;
+        case DEV_TREE_VERSION_V2:
+            entry_size = sizeof(dt_entry_v2_t);
+            break;
+        case DEV_TREE_VERSION_V3:
+            entry_size = sizeof(dt_entry_t);
+            break;
+        default:
+            libboot_format_error(LIBBOOT_ERROR_GROUP_QCDT, LIBBOOT_ERROR_QCDT_UNSUPPORTED_VERSION, qcdt_version);
+            dt_entry_list_free(dt_entry_queue);
+            return -1;
+    }
+
+    if (motorola_version) {
+        parser = "qcom_motorola";
+        entry_size += sizeof(cur_dt_entry->data.u.motorola.model);
+    }
+
+    LOGI("DTB Total entry: %d, DTB version: %d\n", table->num_entries, qcdt_version);
     for (i = 0; found == 0 && i < table->num_entries; i++) {
         libboot_platform_memset(cur_dt_entry, 0, sizeof(dt_entry_local_t));
-        switch (table->version) {
+        switch (qcdt_version) {
             case DEV_TREE_VERSION_V1:
                 dt_entry_v1 = (dt_entry_v1_t *)table_ptr;
+                cur_dt_entry->data.version = qcdt_version;
+                cur_dt_entry->data.u.motorola.version = motorola_version;
                 cur_dt_entry->data.platform_id = dt_entry_v1->platform_id;
                 cur_dt_entry->data.variant_id = dt_entry_v1->variant_id;
                 cur_dt_entry->data.soc_rev = dt_entry_v1->soc_rev;
@@ -1041,11 +1111,16 @@ int libboot_qcdt_get_entry_info(dt_table_t *table, dt_entry_local_t *dt_entry_in
                 cur_dt_entry->data.pmic_rev[3] = libboot_qcdt_pmic_target(3);
                 cur_dt_entry->dtb_data = ((boot_uint8_t *)table) + dt_entry_v1->offset;
                 cur_dt_entry->dtb_size = dt_entry_v1->size;
-                cur_dt_entry->parser = "qcom";
-                table_ptr += sizeof(dt_entry_v1_t);
+                cur_dt_entry->parser = parser;
+
+                if (motorola_version) {
+                    memcpy(cur_dt_entry->data.u.motorola.model, table_ptr+sizeof(*dt_entry_v1), sizeof(cur_dt_entry->data.u.motorola.model));
+                }
                 break;
             case DEV_TREE_VERSION_V2:
                 dt_entry_v2 = (dt_entry_v2_t *)table_ptr;
+                cur_dt_entry->data.version = qcdt_version;
+                cur_dt_entry->data.u.motorola.version = motorola_version;
                 cur_dt_entry->data.platform_id = dt_entry_v2->platform_id;
                 cur_dt_entry->data.variant_id = dt_entry_v2->variant_id;
                 cur_dt_entry->data.soc_rev = dt_entry_v2->soc_rev;
@@ -1069,11 +1144,16 @@ int libboot_qcdt_get_entry_info(dt_table_t *table, dt_entry_local_t *dt_entry_in
                 cur_dt_entry->data.pmic_rev[3] = libboot_qcdt_pmic_target(3);
                 cur_dt_entry->dtb_data = ((boot_uint8_t *)table) + dt_entry_v2->offset;;
                 cur_dt_entry->dtb_size = dt_entry_v2->size;
-                cur_dt_entry->parser = "qcom";
-                table_ptr += sizeof(dt_entry_v2_t);
+                cur_dt_entry->parser = parser;
+
+                if (motorola_version) {
+                    memcpy(cur_dt_entry->data.u.motorola.model, table_ptr+sizeof(*dt_entry_v2), sizeof(cur_dt_entry->data.u.motorola.model));
+                }
                 break;
             case DEV_TREE_VERSION_V3:
                 dt_entry_v3 = (dt_entry_t *)table_ptr;
+                cur_dt_entry->data.version = qcdt_version;
+                cur_dt_entry->data.u.motorola.version = motorola_version;
                 cur_dt_entry->data.platform_id = dt_entry_v3->platform_id;
                 cur_dt_entry->data.variant_id = dt_entry_v3->variant_id;
                 cur_dt_entry->data.board_hw_subtype = dt_entry_v3->board_hw_subtype;
@@ -1086,7 +1166,7 @@ int libboot_qcdt_get_entry_info(dt_table_t *table, dt_entry_local_t *dt_entry_in
 
                 cur_dt_entry->dtb_data = ((boot_uint8_t *)table) + dt_entry_v3->offset;
                 cur_dt_entry->dtb_size = dt_entry_v3->size;
-                cur_dt_entry->parser = "qcom";
+                cur_dt_entry->parser = parser;
 
                 /* For V3 version of DTBs we have platform version field as part
                  * of variant ID, in such case the subtype will be mentioned as 0x0
@@ -1101,10 +1181,12 @@ int libboot_qcdt_get_entry_info(dt_table_t *table, dt_entry_local_t *dt_entry_in
                 if (cur_dt_entry->data.board_hw_subtype == 0)
                     cur_dt_entry->data.board_hw_subtype = (cur_dt_entry->data.variant_id >> 0x18);
 
-                table_ptr += sizeof(dt_entry_t);
+                if (motorola_version) {
+                    memcpy(cur_dt_entry->data.u.motorola.model, table_ptr+sizeof(*dt_entry_v3), sizeof(cur_dt_entry->data.u.motorola.model));
+                }
                 break;
             default:
-                libboot_format_error(LIBBOOT_ERROR_GROUP_QCDT, LIBBOOT_ERROR_QCDT_UNSUPPORTED_VERSION, table->version);
+                libboot_format_error(LIBBOOT_ERROR_GROUP_QCDT, LIBBOOT_ERROR_QCDT_UNSUPPORTED_VERSION, qcdt_version);
                 dt_entry_list_free(dt_entry_queue);
                 return -1;
         }
@@ -1114,6 +1196,7 @@ int libboot_qcdt_get_entry_info(dt_table_t *table, dt_entry_local_t *dt_entry_in
         */
         devtree_entry_add_if_excact_match(cur_dt_entry, dt_entry_queue);
 
+        table_ptr += entry_size;
     }
     best_match_dt_entry = devtree_get_best_entry(dt_entry_queue);
     if (best_match_dt_entry) {

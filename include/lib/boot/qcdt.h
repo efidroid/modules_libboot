@@ -61,6 +61,11 @@ typedef struct {
             boot_uint32_t id0;
             boot_uint32_t id1;
         } oppo;
+
+        struct {
+            boot_uint32_t version;
+            char model[32];
+        } motorola;
     } u;
 } dt_entry_data_t;
 
