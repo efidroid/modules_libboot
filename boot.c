@@ -731,6 +731,7 @@ int libboot_prepare(bootimg_context_t *context)
         boot_uintn_t naddr = (boot_uintn_t)libboot_platform_bootalloc(context->ramdisk_addr, context->ramdisk_size);
         if (!naddr) {
             libboot_format_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_PREPARE_NO_RAMDISK_MEMORY, context->ramdisk_addr, context->ramdisk_size);
+            libboot_platform_bootfree(context->kernel_addr, context->kernel_size);
             return -1;
         }
         context->ramdisk_addr = naddr;
@@ -739,6 +740,8 @@ int libboot_prepare(bootimg_context_t *context)
         boot_uintn_t naddr = (boot_uintn_t)libboot_platform_bootalloc(context->tags_addr, context->tags_size);
         if (!naddr) {
             libboot_format_error(LIBBOOT_ERROR_GROUP_COMMON, LIBBOOT_ERROR_COMMON_PREPARE_NO_TAGS_MEMORY, context->tags_addr, context->tags_size);
+            libboot_platform_bootfree(context->kernel_addr, context->kernel_size);
+            libboot_platform_bootfree(context->ramdisk_addr, context->ramdisk_size);
             return -1;
         }
         context->tags_addr = naddr;
