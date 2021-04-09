@@ -120,12 +120,15 @@ char *libboot_internal_error_stack_alloc(void);
 #define libboot_format_error(group, type, ...) do {\
     char* __macro__buf = libboot_internal_error_stack_alloc();\
     if(!__macro__buf) break; \
-    libboot_error_format_t *__macro__format = libboot_internal_get_error_format(group, type); \
+    libboot_error_format_t *__macro__format = libboot_internal_get_error_format(group, (libboot_error_type_t)type); \
     if(__macro__format) libboot_internal_format_errorstring(__macro__buf, 4096, __macro__format->fmt, ##__VA_ARGS__); \
     else libboot_internal_format_errorstring(__macro__buf, 4096, "unknown error %"LIBBOOT_FMT_INT" in group %"LIBBOOT_FMT_INT, group, type); \
     libboot_internal_error_directprint(__macro__buf); \
 } while(0)
-void libboot_internal_register_error(libboot_error_group_t group, libboot_error_type_t type, const char *fmt);
+
+void _libboot_internal_register_error(libboot_error_group_t group, libboot_error_type_t type, const char *fmt);
+#define libboot_internal_register_error(group, type, fmt) \
+    _libboot_internal_register_error((group), (libboot_error_type_t)(type), (fmt))
 
 // crc
 unsigned long libboot_crc32(unsigned long crc, const unsigned char *buf, unsigned int len);

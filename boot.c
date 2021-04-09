@@ -337,7 +337,7 @@ int libboot_identify_memory(void *mem, boot_uintn_t sz, bootimg_context_t *conte
     return rc;
 }
 
-void libboot_internal_register_error(libboot_error_group_t group, libboot_error_type_t type, const char *fmt)
+void _libboot_internal_register_error(libboot_error_group_t group, libboot_error_type_t type, const char *fmt)
 {
     libboot_error_format_t *format = libboot_alloc(sizeof(libboot_error_format_t));
     if (!format) return;
